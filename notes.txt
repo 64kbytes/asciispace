@@ -1,0 +1,23 @@
+MAIN
+	init
+		initialize from config
+		
+	main loop
+		handle keys
+		update objects
+		render
+
+GM
+	ego
+	npc
+	spacecraft
+	WORDS
+		
+	WORLD
+		generate
+	PHYSICS
+		chemistry
+	TECH
+		systems
+	
+		
