@@ -1,4 +1,4 @@
-TITLE			= 'Space Adventure'
+TITLE			= 'Space Odyssey'
 VER				= '0.0.5'
 SCREEN_WIDTH	= 80
 SCREEN_HEIGHT	= 50
@@ -11,3 +11,10 @@ TILE_SET		= 'assets/vidumec_15x15.png'
 #TILE_SET		= 'assets/test.png'
 
 #TILE_SET		= 'assets/terminal.png'
+
+KEYBOARD_MAP = {
+	'UP':		'w',
+	'DOWN':		's',
+	'LEFT':		'a',
+	'RIGHT':	'd'
+}
