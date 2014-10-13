@@ -1,48 +1,57 @@
 #!/usr/bin/python
 import config
 import gm.gm as GM
-import uiterminal.render as G
+
+if config.RENDER == 'libtcod':
+	import uiblocky.render as G
+else:
+	import uiterminal.render as G
 
 def exit():
 	G.cleanup()
+	quit()
 	
-def init():
-	# invert keyboard map. Better for code
-	config.KEYBOARD_MAP = dict([[v,k] for k,v in config.KEYBOARD_MAP.items()])
-	
+def init():	
 	GM.init()
 	G.init()
+	G.set_fov_map(GM.WORLD)
 	G.intro()
 	G.options()
 
 init()
 
 def handle_user_input(ui):
-	ev = config.KEYBOARD_MAP.get(ui, None)
 	
-	xyz = (0,0,0)
-	
-	if ev is None: 
+	if ui is None: 
+		GM.EGO.is_updated = True if GM.EGO.is_updated is not None else False
 		return False
-	elif ev == 'UP':	xyz = (0, -1, 0)
-	elif ev == 'DOWN':	xyz = (0, 1, 0)
-	elif ev == 'LEFT':	xyz = (-1, 0, 0)
-	elif ev == 'RIGHT':	xyz = (1, 0, 0)
+	
+	if ui == 'ESCAPE':	exit()
 
-	GM.move_ego(xyz)
+	xyz = (0,0,0)	
+	if ui == 'UP':		xyz = (0, -1, 0)
+	elif ui == 'DOWN':	xyz = (0, 1, 0)
+	elif ui == 'LEFT':	xyz = (-1, 0, 0)
+	elif ui == 'RIGHT':	xyz = (1, 0, 0)
+
+	if xyz != (0,0,0):
+		GM.EGO.is_updated = False
+		GM.move_ego(xyz)
+	
+snapshot = None
 		
 while True:
 
-	ui = G.read()
+	if snapshot:
+		G.clear(snapshot)
 
-	if ui == 'q':
+	ui = G.get_keyboard()
+	if ui is False:
 		break
-
-	handle_user_input(ui)	
+		
+	handle_user_input(ui)
 	
-	ss = GM.snapshot()
+	snapshot = GM.snapshot()
+	G.render(snapshot)
 	
-	G.cycle(ss)
-
-
 exit()

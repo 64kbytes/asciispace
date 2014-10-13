@@ -1,42 +1,44 @@
 import config
-import characters as cha
-from world import *
+import entities as ent
+import world as wrl
 
-ego = None
-cast = []
-world = []
+EGO = None
+CAST = []
+WORLD = []
 
 def init():
-	global world
-	create_ego()
+	create_world()
 	create_npc()
-	world = make_map(config.MAP_WIDTH, config.MAP_HEIGHT, world)
+	create_ego()	
+
+def create_world():
+	global WORLD
+	WORLD = wrl.make_map(config.MAP_WIDTH, config.MAP_HEIGHT, WORLD)
 
 def create_ego():
-	global ego, cast, world
-	ego = cha.Ego((3, 3, 0))
-	cast.append(ego)
+	global EGO
+	EGO = ent.Ego(wrl.PLAYER_XYZ)
+	CAST.append(EGO)
 	
 def create_npc():
-	global ego, cast, world
-	cast.append(cha.NPC((2, 2, 0)))
+	CAST.append(ent.NPC((2, 2, 0)))
 	
 def snapshot():
-	global ego
+	global WORLD
 	return {
-		'Ego.name': ego.name,
-		'Ego.x': ego.x,
-		'Ego.y': ego.y,
-		'Ego.z': ego.z
+		'world':	WORLD,
+		'cast':		CAST,
+		'ego':		EGO		
 	}
 	
 def move_ego(xyz):
-	global ego
-	ego.move(xyz)
+	nx = EGO.x + xyz[0]
+	ny = EGO.y + xyz[1]
+
+	if nx < config.MAP_WIDTH and ny < config.MAP_HEIGHT:	
+		if not WORLD[nx][ny].blocked:
+			EGO.move(xyz)
 	
 def cycle():
 	pass
-	
-	
-
 

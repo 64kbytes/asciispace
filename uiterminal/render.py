@@ -1,7 +1,17 @@
 import tty, termios, sys
 import config
 
+KEYBOARD_MAP = {
+	'ESCAPE':	'q',
+	'UP':		'w',
+	'DOWN':		's',
+	'LEFT':		'a',
+	'RIGHT':	'd'
+}
+
 def init():
+	global KEYBOARD_MAP
+	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
 	sys.stdout.write("\x1b]2;" + config.TITLE + "\x07")
 	clear()
 	   
@@ -17,7 +27,7 @@ def clear():
 def render(snapshot):
 	pass
 	
-def read():
+def get_keyboard():
    #Returns a single character from standard input
    fd = sys.stdin.fileno()
    old_settings = termios.tcgetattr(fd)
@@ -28,9 +38,9 @@ def read():
    finally:
       termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
    
-   return ch
+   return KEYBOARD_MAP.get(ch, None)
 
-def cycle(snapshot):
+def render(snapshot):
 	print snapshot
 	return True
 	   
