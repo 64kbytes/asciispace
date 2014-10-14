@@ -5,6 +5,7 @@ ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
 MAX_ROOMS = 30
 PLAYER_XYZ = None
+LIGHTS = []
 
 class Tile:
 	#a tile of the map and its properties
@@ -87,6 +88,7 @@ def make_map(width, height, world):
 		if not failed:
 			world = create_room(new_room, world)
 			(new_x, new_y) = new_room.center()
+			LIGHTS.append((new_x, new_y))
 			if num_rooms == 0:
 				PLAYER_XYZ = (new_x, new_y, 0)
 			else:

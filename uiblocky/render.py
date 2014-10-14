@@ -8,8 +8,8 @@ import math
 
 DARK_WALL = ltc.black
 DARK_GROUND = ltc.black
-EXPLORED_WALL = ltc.darkest_grey
-EXPLORED_GROUND = ltc.grey
+EXPLORED_WALL = ltc.black
+EXPLORED_GROUND = ltc.darkest_grey * .5
 
 LIGHT_WALL = ltc.Color(130, 110, 50)
 LIGHT_GROUND = ltc.Color(200, 180, 50)
@@ -26,11 +26,12 @@ KEYBOARD_MAP = {
 	'LEFT':			ltc.KEY_LEFT,
 	'RIGHT':		ltc.KEY_RIGHT
 }
-FOV_RECOMPUTE = False
+
 FOV_MAP = None
 FOV_ALGO = 0  #default FOV algorithm
 FOV_LIGHT_WALLS = True
 TORCH_RADIUS = 10
+LIGHT_RADIUS = 5
 
 def init():
 	global SYMBOL_MAP, KEYBOARD_MAP, CON, UI, MOUSE, KEY
@@ -76,10 +77,6 @@ def clear(snapshot):
 		ltc.console_set_char_background(CON, cha.x, cha.y, ltc.BKGND_NONE, ltc.BKGND_SET)
 		ltc.console_put_char(CON, cha.x, cha.y, ' ', ltc.BKGND_NONE)
 
-def all_subclasses(cls):
-	return cls.__subclasses__() + [g for s in cls.__subclasses__()
-		for g in all_subclasses(s)]
-
 def render_UI(snapshot):
 
 	ltc.console_clear(UI)
@@ -96,14 +93,41 @@ def render_UI(snapshot):
 	
 	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 10, 0, 0, 0, 1, .5)
 
-def render(snapshot):
+FLAG = False
+LIGHT_MAPS = []
 
+def render(snapshot):
+	global FLAG #TODO: get ride of this thing!	
+	global LIGHT_MAPS
 	world = snapshot['world']
+	
+	if not FLAG:
+		for light in snapshot['lights']:
+			lmap = ltc.map_new(config.MAP_HEIGHT, config.MAP_WIDTH)
+
+			for y in range(config.MAP_HEIGHT):
+				for x in range(config.MAP_WIDTH):
+					ltc.map_set_properties(lmap, x, y, not world[x][y].block_sight, not world[x][y].blocked)
+					
+			ltc.map_compute_fov(lmap, light[0], light[1], LIGHT_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)		
+			LIGHT_MAPS.append(lmap)
+		FLAG = True
+	
+	#recompute FOV if needed (the player moved or something)
+	if not snapshot['ego'].is_updated:		
+		ltc.map_compute_fov(FOV_MAP, snapshot['ego'].x, snapshot['ego'].y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
+		snapshot['ego'].is_updated = True
 	
 	#go through all tiles, and set their background color according to the FOV
 	for y in range(config.MAP_HEIGHT):
 		for x in range(config.MAP_WIDTH):
 			visible = ltc.map_is_in_fov(FOV_MAP, x, y)
+			for lmap in LIGHT_MAPS:
+				lighted = False
+				if ltc.map_is_in_fov(lmap, x, y):
+					lighted = True
+					break
+			
 			wall = world[x][y].block_sight
 			explored = world[x][y].explored
 			if not visible:
@@ -122,15 +146,15 @@ def render(snapshot):
 			#it's visible
 				world[x][y].explored = True
 				if wall:
-					ltc.console_set_char_background(CON, x, y, LIGHT_WALL, ltc.BKGND_SET )
+					if lighted:
+						ltc.console_set_char_background(CON, x, y, LIGHT_WALL, ltc.BKGND_SET )
+					else:
+						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * .5, ltc.BKGND_SET )
 				else:
-					ltc.console_set_char_background(CON, x, y, LIGHT_GROUND, ltc.BKGND_SET )
-	
-		
-	#recompute FOV if needed (the player moved or something)
-	if not snapshot['ego'].is_updated:		
-		ltc.map_compute_fov(FOV_MAP, snapshot['ego'].x, snapshot['ego'].y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
-		snapshot['ego'].is_updated = True
+					if lighted:
+						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND, ltc.BKGND_SET )
+					else:
+						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * .5, ltc.BKGND_SET )
 		
 	#render characters
 	for cha in snapshot['cast']:
@@ -141,7 +165,7 @@ def render(snapshot):
 			
 	ltc.console_blit(CON, 0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT, 0, 0, 0)
 	
-	render_UI(snapshot)
+	#render_UI(snapshot)
 	
 	ltc.console_flush()
 	
@@ -153,7 +177,10 @@ def set_fov_map(world):
 	for y in range(config.MAP_HEIGHT):
 		for x in range(config.MAP_WIDTH):
 		    ltc.map_set_properties(FOV_MAP, x, y, not world[x][y].block_sight, not world[x][y].blocked)
-    
+		    
+def set_light_map(world):
+	pass
+	
 def cleanup():
 	global CON
 	ltc.console_clear(CON)

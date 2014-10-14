@@ -2,6 +2,10 @@ import text.words as wrd
 
 wrd.Words.init()
 
+def all_subclasses(cls):
+	return cls.__subclasses__() + [g for s in cls.__subclasses__()
+		for g in all_subclasses(s)]
+
 class Entity(object):
 	def __init__(self):
 		pass

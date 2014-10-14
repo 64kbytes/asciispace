@@ -5,6 +5,7 @@ import world as wrl
 EGO = None
 CAST = []
 WORLD = []
+LIGHTS = []
 
 def init():
 	create_world()
@@ -12,8 +13,9 @@ def init():
 	create_ego()	
 
 def create_world():
-	global WORLD
+	global WORLD, LIGHTS
 	WORLD = wrl.make_map(config.MAP_WIDTH, config.MAP_HEIGHT, WORLD)
+	LIGHTS = wrl.LIGHTS
 
 def create_ego():
 	global EGO
@@ -21,14 +23,16 @@ def create_ego():
 	CAST.append(EGO)
 	
 def create_npc():
-	CAST.append(ent.NPC((2, 2, 0)))
+	pass
+	#CAST.append(ent.NPC((2, 2, 0)))
 	
 def snapshot():
-	global WORLD
+	global WORLD, LIGHTS
 	return {
 		'world':	WORLD,
+		'lights':	LIGHTS,
 		'cast':		CAST,
-		'ego':		EGO		
+		'ego':		EGO	
 	}
 	
 def move_ego(xyz):
