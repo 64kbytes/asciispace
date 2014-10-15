@@ -43,8 +43,8 @@ snapshot = None
 		
 while True:
 
-	if snapshot:
-		G.clear(snapshot)
+	#if snapshot:
+	#	G.clear(snapshot)
 
 	ui = G.get_keyboard()
 	if ui is False:

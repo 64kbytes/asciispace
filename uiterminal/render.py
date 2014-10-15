@@ -9,6 +9,14 @@ KEYBOARD_MAP = {
 	'RIGHT':	'd'
 }
 
+#delete
+def set_fov_map(arg):
+	pass
+def set_light_map(arg):
+	pass
+#delete - end of block
+
+
 def init():
 	global KEYBOARD_MAP
 	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
@@ -21,7 +29,7 @@ def intro():
 def options():
 	print "Press 'q' to quit"   
 
-def clear():
+def clear(snapshot = None):
 	sys.stderr.write("\x1b[2J\x1b[H")
    
 def render(snapshot):
@@ -39,9 +47,27 @@ def get_keyboard():
       termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
    
    return KEYBOARD_MAP.get(ch, None)
-
+   
 def render(snapshot):
-	print snapshot
+	clear(snapshot)
+	world = snapshot['world']
+	
+	board = [[0 for y in range(config.MAP_WIDTH)] for x in range(config.MAP_HEIGHT)]
+		
+	for x in range(config.MAP_WIDTH):
+		for y in range(config.MAP_HEIGHT):
+			if world[x][y].block_sight:
+				board[y][x] = unichr(0x2588)
+			else:
+				board[y][x] = ' '
+				
+	board[snapshot['ego'].y][snapshot['ego'].x] = '@'
+					
+	for y in range(config.MAP_HEIGHT):
+		print ''.join(board[y])
+		
+	
+
 	return True
 	   
 def cleanup():
