@@ -40,7 +40,7 @@ def handle_user_input(ui):
 		GM.move_ego(xyz)
 	
 snapshot = None
-		
+
 while True:
 
 	#if snapshot:
