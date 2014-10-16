@@ -42,10 +42,10 @@ def handle_user_input(ui):
 snapshot = None
 
 while True:
-
-	#if snapshot:
+	
+	#if snapshot is not None:
 	#	G.clear(snapshot)
-
+	
 	ui = G.get_keyboard()
 	if ui is False:
 		break
