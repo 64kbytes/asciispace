@@ -39,7 +39,7 @@ def init():
 	w = config.SCREEN_WIDTH
 	h = config.SCREEN_HEIGHT
 	ltc.sys_set_fps(config.FPS)
-	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_TYPE_GREYSCALE | ltc.FONT_LAYOUT_TCOD)
+	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_ASCII_INROW | ltc.FONT_TYPE_GREYSCALE, 16, 16)
 	ltc.console_init_root(w, h, config.TITLE, False)
 	
 	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
@@ -91,7 +91,7 @@ def render_UI(snapshot):
 	ltc.console_set_default_foreground(UI, ltc.black)
 	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, names)
 	
-	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 10, 0, 0, 0, 1, .5)
+	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 1, 0, 0, 0, 1, .5)
 
 FLAG = False
 LIGHT_MAPS = []
@@ -100,6 +100,8 @@ def render(snapshot):
 	global FLAG #TODO: get ride of this thing!	
 	global LIGHT_MAPS
 	world = snapshot['world']
+	
+	ltc.console_clear(CON)
 	
 	if not FLAG:
 		for light in snapshot['lights']:
@@ -165,7 +167,7 @@ def render(snapshot):
 			
 	ltc.console_blit(CON, 0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT, 0, 0, 0)
 	
-	#render_UI(snapshot)
+	render_UI(snapshot)
 	
 	ltc.console_flush()
 	

@@ -40,12 +40,12 @@ def handle_user_input(ui):
 		GM.move_ego(xyz)
 	
 snapshot = None
-		
+
 while True:
-
-	if snapshot:
-		G.clear(snapshot)
-
+	
+	#if snapshot is not None:
+	#	G.clear(snapshot)
+	
 	ui = G.get_keyboard()
 	if ui is False:
 		break

@@ -16,7 +16,7 @@ def create_world():
 	global WORLD, LIGHTS
 	WORLD = wrl.make_map(config.MAP_WIDTH, config.MAP_HEIGHT, WORLD)
 	LIGHTS = wrl.LIGHTS
-
+	
 def create_ego():
 	global EGO
 	EGO = ent.Ego(wrl.PLAYER_XYZ)
