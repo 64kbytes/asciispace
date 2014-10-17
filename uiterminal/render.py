@@ -71,59 +71,50 @@ def set_fov_map(world):
 def set_light_map(snapshot):
 	pass
 
-def map_compute_fov(x0, y0, light_walls = False, radius = 10):
+def map_compute_fov(x0, y0, light_walls = False, radius = 10, fix = True):
 	global FOV_MAP, SIGHT_MAP
-	SIGHT_MAP = [[0 for y in range(config.MAP_HEIGHT)] for x in range(config.MAP_WIDTH)]
-	#raytrace
-	for x in range(config.MAP_WIDTH):
-		line = get_line(x0, y0, x, 0)
-		for square in line:
-			if distance((x0, y0), (square[0], square[1])) > radius:
-				break		
-			if FOV_MAP[square[0]][square[1]] < 1:
-				if light_walls:
-					SIGHT_MAP[square[0]][square[1]] = 1					
-				break
-			
-			SIGHT_MAP[square[0]][square[1]] = 1
-			
-	for y in range(config.MAP_HEIGHT):
-		line = get_line(x0, y0, config.MAP_WIDTH, y)
-		for square in line:
-			if distance((x0, y0), (square[0], square[1])) > radius:
-				break		
-			if FOV_MAP[square[0]][square[1]] < 1:
-				if light_walls:
-					SIGHT_MAP[square[0]][square[1]] = 1					
-				break
-			
-			SIGHT_MAP[square[0]][square[1]] = 1
-			
-	for x in range(config.MAP_WIDTH):
-		line = get_line(x0, y0, x, config.MAP_HEIGHT)
-		for square in line:
-			if distance((x0, y0), (square[0], square[1])) > radius:
-				break		
-			if FOV_MAP[square[0]][square[1]] < 1:
-				if light_walls:
-					SIGHT_MAP[square[0]][square[1]] = 1					
-				break
-			
-			SIGHT_MAP[square[0]][square[1]] = 1
 	
-	for y in range(config.MAP_HEIGHT):
-		line = get_line(x0, y0, 0, y)
-		for square in line:
-			if distance((x0, y0), (square[0], square[1])) > radius:
-				break		
-			if FOV_MAP[square[0]][square[1]] < 1:
-				if light_walls:
-					SIGHT_MAP[square[0]][square[1]] = 1					
-				break
+	SIGHT_MAP = [[0 for y in range(radius * 2)] for x in range(radius * 2)]
+	
+	ox = x0 - radius
+	oy = y0 - radius
+	
+	for q in range(4):
 			
-			SIGHT_MAP[square[0]][square[1]] = 1
-
-
+		for n in range(radius * 2):
+		
+			if q == 0:
+				line = get_line(x0, y0, ox + n, oy + 0)
+			elif q == 1: 
+				line = get_line(x0, y0, ox + n, oy + (radius * 2) - 1)
+			elif q == 2: 
+				line = get_line(x0, y0, ox + 0, oy + n)
+			elif q == 3: 
+				line = get_line(x0, y0, ox + (radius * 2) - 1, oy + n)
+					
+			for square in line:
+				if (square[0] >= config.MAP_WIDTH) or (square[1] >= config.MAP_HEIGHT) or (square[0] < 0 )or (square[1] < 0):
+					break
+				
+				#artifact fix. Is straight vertical or horizontal
+				if n == radius and fix:
+					#is horizontal
+					if q == 0 or q == 1:
+						SIGHT_MAP[square[0] - ox - 1][square[1] - oy] = 1
+						SIGHT_MAP[square[0] - ox + 1][square[1] - oy] = 1
+					#is vertical
+					if q == 2 or q == 3:	
+						SIGHT_MAP[square[0] - ox][square[1] - oy + 1] = 1
+						SIGHT_MAP[square[0] - ox][square[1] - oy - 1] = 1
+				
+				
+				if FOV_MAP[square[0]][square[1]] < 1:
+					if light_walls:
+						SIGHT_MAP[square[0] - ox][square[1] - oy] = 1		
+					break
+				
+				SIGHT_MAP[square[0] - ox][square[1] - oy] = 1
+				
 def init():
 	global KEYBOARD_MAP
 	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
@@ -156,28 +147,73 @@ def get_keyboard():
    return KEYBOARD_MAP.get(ch, None)
    
 def render(snapshot):
-	clear(snapshot)
+	clear()
 	world = snapshot['world']
 	
-	if not snapshot['ego'].is_updated:
-		map_compute_fov(snapshot['ego'].x, snapshot['ego'].y, True, 20)
+	radius = 10
 	
-	board = [[0 for y in range(config.MAP_WIDTH)] for x in range(config.MAP_HEIGHT)]
-		
+	if not snapshot['ego'].is_updated:
+		map_compute_fov(snapshot['ego'].x, snapshot['ego'].y, True, radius)
+	
+	board = [[' ' for y in range(config.MAP_WIDTH)] for x in range(config.MAP_HEIGHT)]
+	
+	ox = snapshot['ego'].x - radius
+	oy = snapshot['ego'].y - radius
+	
+	#explored
 	for x in range(config.MAP_WIDTH):
 		for y in range(config.MAP_HEIGHT):
-			if SIGHT_MAP[x][y] == 1:
+		
+			if world[x][y].explored:
 				if world[x][y].block_sight:
-					board[y][x] = unichr(0x2588)
+					board[y][x] =  unichr(0x2591) #shaded full block #circle unichr(0x0A66)
 				else:
-					board[y][x] = '.'
+					board[y][x] =  ' '
+			
+			# in FOV area
+			if (ox < x < ox + (radius * 2)) and (oy < y < oy + (radius * 2)):
+				# in FOV
+				if SIGHT_MAP[x - ox][y - oy] == 1:
+					snapshot['world'][x][y].explored = True
+					if world[x][y].block_sight:
+						board[y][x] = unichr(0x2588) #full block
+					else:
+						board[y][x] = unichr(0x02D1) #small dot
+				
+		
+					
+	board[snapshot['ego'].y][snapshot['ego'].x] = '@'
+					
+	for y in range(config.MAP_HEIGHT):
+		print ''.join(board[y])
+			
+			
+		
+	"""		
+	for x in range(radius * 2):
+		if (ox + x >= config.MAP_WIDTH) or (ox + x < 0):
+			continue
+			
+		for y in range(radius * 2):
+			if oy + y >= config.MAP_HEIGHT or (oy + y < 0):
+				continue
+
+			# in FOV
+			if SIGHT_MAP[x][y] == 1:
+				snapshot['world'][ox + x][oy + y].explored = True
+				if world[ox + x][oy + y].block_sight:
+					board[oy + y][ox + x] = unichr(0x2588)
+				else:
+					board[oy + y][ox + x] = '.'
+			# out of FOV
 			else:
-				board[y][x] = ' '
+				board[oy + y][ox + x] = '?' 
 				
 	board[snapshot['ego'].y][snapshot['ego'].x] = '@'
 					
 	for y in range(config.MAP_HEIGHT):
 		print ''.join(board[y])
+	"""
 		
 	
 

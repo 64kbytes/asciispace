@@ -4,7 +4,7 @@ import random
 ROOM_MAX_SIZE = 10
 ROOM_MIN_SIZE = 6
 MAX_ROOMS = 30
-PLAYER_XYZ = None
+PLAYER_XYZ = (20, 39, 0)
 LIGHTS = []
 
 class Tile:
@@ -66,7 +66,7 @@ def make_map(width, height, world):
 
 	rooms = []
 	num_rooms = 0
-
+	
 	for r in range(MAX_ROOMS):
 		#random width and height
 		w = random.randint(ROOM_MIN_SIZE, ROOM_MAX_SIZE)
