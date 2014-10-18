@@ -14,8 +14,6 @@ def exit():
 def init():	
 	GM.init()
 	G.init()
-	G.set_fov_map(GM.WORLD)
-	G.set_light_map(GM.WORLD)
 	G.intro()
 	G.options()
 

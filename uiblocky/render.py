@@ -2,11 +2,12 @@ import config
 import libtcodpy as ltc
 import symbols as sym
 import math
+from algorithms.fov import *
 
 #DARK_WALL = ltc.Color(0, 0, 100)
 #DARK_GROUND = ltc.Color(50, 50, 150)
 
-DARK_WALL = ltc.black
+DARK_WALL = ltc.grey
 DARK_GROUND = ltc.black
 EXPLORED_WALL = ltc.black
 EXPLORED_GROUND = ltc.darkest_grey * .5
@@ -41,7 +42,8 @@ def init():
 	ltc.sys_set_fps(config.FPS)
 	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_ASCII_INROW | ltc.FONT_TYPE_GREYSCALE, 16, 16)
 	ltc.console_init_root(w, h, config.TITLE, False)
-	
+
+
 	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
 	CON = ltc.console_new(w, h)
 	UI = ltc.console_new(w, 10)
@@ -93,71 +95,43 @@ def render_UI(snapshot):
 	
 	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 1, 0, 0, 0, 1, .5)
 
-FLAG = False
-LIGHT_MAPS = []
-
 def render(snapshot):
-	global FLAG #TODO: get ride of this thing!	
-	global LIGHT_MAPS
-	world = snapshot['world']
+		
+	world = snapshot['world'].terrain
+	fov = snapshot['world'].get_fov()
 	
 	ltc.console_clear(CON)
 	
-	if not FLAG:
-		for light in snapshot['lights']:
-			lmap = ltc.map_new(config.MAP_HEIGHT, config.MAP_WIDTH)
-
-			for y in range(config.MAP_HEIGHT):
-				for x in range(config.MAP_WIDTH):
-					ltc.map_set_properties(lmap, x, y, not world[x][y].block_sight, not world[x][y].blocked)
-					
-			ltc.map_compute_fov(lmap, light[0], light[1], LIGHT_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)		
-			LIGHT_MAPS.append(lmap)
-		FLAG = True
+	radius = 20
 	
 	#recompute FOV if needed (the player moved or something)
-	if not snapshot['ego'].is_updated:		
-		ltc.map_compute_fov(FOV_MAP, snapshot['ego'].x, snapshot['ego'].y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
+	if not snapshot['ego'].is_updated or snapshot['world'].fov is None:
+		fov = snapshot['world'].update_fov(snapshot['ego'].x, snapshot['ego'].y, radius)
 		snapshot['ego'].is_updated = True
-	
-	#go through all tiles, and set their background color according to the FOV
-	for y in range(config.MAP_HEIGHT):
-		for x in range(config.MAP_WIDTH):
-			visible = ltc.map_is_in_fov(FOV_MAP, x, y)
-			for lmap in LIGHT_MAPS:
-				lighted = False
-				if ltc.map_is_in_fov(lmap, x, y):
-					lighted = True
-					break
-			
-			wall = world[x][y].block_sight
-			explored = world[x][y].explored
-			if not visible:
-				#it's out of the player's FOV
-				if wall:
-					if explored:
-						ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
-					else:
-						ltc.console_set_char_background(CON, x, y, DARK_WALL, ltc.BKGND_SET)
-				else:
-					if explored:
-						ltc.console_set_char_background(CON, x, y, EXPLORED_GROUND, ltc.BKGND_SET)
-					else:
-						ltc.console_set_char_background(CON, x, y, DARK_GROUND, ltc.BKGND_SET)
-			else:
-			#it's visible
-				world[x][y].explored = True
-				if wall:
-					if lighted:
-						ltc.console_set_char_background(CON, x, y, LIGHT_WALL, ltc.BKGND_SET )
-					else:
-						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * .5, ltc.BKGND_SET )
-				else:
-					if lighted:
-						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND, ltc.BKGND_SET )
-					else:
-						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * .5, ltc.BKGND_SET )
 		
+	ox = snapshot['ego'].x - radius
+	oy = snapshot['ego'].y - radius
+	
+	#explored
+	for x in range(config.MAP_WIDTH):
+		for y in range(config.MAP_HEIGHT):
+		
+			if world[y][x].explored:
+				if world[y][x].block_sight:
+					ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
+				else:
+					ltc.console_set_char_background(CON, x, y, EXPLORED_GROUND, ltc.BKGND_SET)
+			
+			# in FOV area
+			if (ox < x < ox + (radius * 2)) and (oy < y < oy + (radius * 2)):
+				# in FOV
+				if fov[y - oy][x - ox] > 0:
+					snapshot['world'].terrain[y][x].explored = True
+					if world[y][x].block_sight:
+						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * fov[y - oy][x - ox], ltc.BKGND_SET )
+					else:
+						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * fov[y - oy][x - ox], ltc.BKGND_SET )
+	
 	#render characters
 	for cha in snapshot['cast']:
 		symbol = sym.get_symbol(cha)
@@ -170,18 +144,7 @@ def render(snapshot):
 	render_UI(snapshot)
 	
 	ltc.console_flush()
-	
-	
 
-def set_fov_map(world):
-	global FOV_MAP
-	FOV_MAP = ltc.map_new(config.MAP_WIDTH, config.MAP_HEIGHT)
-	for y in range(config.MAP_HEIGHT):
-		for x in range(config.MAP_WIDTH):
-		    ltc.map_set_properties(FOV_MAP, x, y, not world[x][y].block_sight, not world[x][y].blocked)
-		    
-def set_light_map(world):
-	pass
 	
 def cleanup():
 	global CON

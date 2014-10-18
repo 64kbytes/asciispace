@@ -13,9 +13,8 @@ def init():
 	create_ego()	
 
 def create_world():
-	global WORLD, LIGHTS
-	WORLD = wrl.make_map(config.MAP_WIDTH, config.MAP_HEIGHT, WORLD)
-	LIGHTS = wrl.LIGHTS
+	global WORLD
+	WORLD = wrl.Region(config.MAP_WIDTH, config.MAP_HEIGHT)
 	
 def create_ego():
 	global EGO
@@ -28,6 +27,7 @@ def create_npc():
 	
 def snapshot():
 	global WORLD, LIGHTS
+		
 	return {
 		'world':	WORLD,
 		'lights':	LIGHTS,
@@ -40,7 +40,7 @@ def move_ego(xyz):
 	ny = EGO.y + xyz[1]
 
 	if nx < config.MAP_WIDTH and ny < config.MAP_HEIGHT:	
-		if not WORLD[nx][ny].blocked:
+		if not WORLD.terrain[ny][nx].blocked:
 			EGO.move(xyz)
 	
 def cycle():

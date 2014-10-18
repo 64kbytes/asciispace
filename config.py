@@ -1,5 +1,5 @@
 TITLE			= 'Space Odyssey'
-VER				= '0.0.5'
+VER				= '0.0.1'
 RENDER			= 'terminal'
 #RENDER			= 'libtcod'
 SCREEN_WIDTH	= 80
