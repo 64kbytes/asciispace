@@ -52,8 +52,8 @@ class Viewport(object):
 		
 	def is_leaving(self, x, y):
 		boundary = 5
-		px,py = self.pos(x, y)
-		return not ((self.scr_width - boundary) > px > boundary) or ((self.scr_height - boundary) > py > boundary)
+		px,py = self.pos(x, y)	
+		return not (((self.scr_width - boundary) > px > boundary) and ((self.scr_height - boundary) > py > boundary))
 			
 
 def exit():
