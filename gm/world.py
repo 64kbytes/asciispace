@@ -2,10 +2,6 @@ import random
 from algorithms.fov import *
 from algorithms.geometry import *
 
-#parameters for dungeon generator
-ROOM_MAX_SIZE = 10
-ROOM_MIN_SIZE = 6
-MAX_ROOMS = 30
 PLAYER_XYZ = (20, 39, 0)
 LIGHTS = []
 
@@ -14,6 +10,7 @@ class Tile:
 	def __init__(self, blocked, block_sight = None, explored = False):
 		self.blocked = blocked
 		self.explored = explored
+		self.connections = '0000'
 		#by default, if a tile is blocked, it also blocks sight
 		if block_sight is None: block_sight = blocked
 		self.block_sight = block_sight
@@ -22,15 +19,21 @@ class Planet(object):
 	pass
 
 class Region(object):
-	def __init__(self, width, height, terrain = None):
-		if terrain is None:
-			#fill map with "blocked" tiles
-			self.terrain = [[ Tile(True)
-				for x in range(width) ]
-					for y in range(height) ]
-		else:			
-			self.terrain = terrain
-		
+	def __init__(self, width, height):
+	
+		self.width = width
+		self.height = height
+	
+		#parameters for dungeon generator
+		self.room_max_size = 10
+		self.room_min_size = 6
+		self.max_rooms = 120
+			
+		#fill map with "blocked" tiles
+		self.terrain = [[ Tile(True)
+			for x in range(width) ]
+				for y in range(height) ]
+					
 		self.create_dungeon(width, height)		
 		self.fov_map = set_fov_map(self.terrain)
 		self.fov = None
@@ -40,6 +43,9 @@ class Region(object):
 		
 	def get_fov(self):
 		return self.fov
+		
+	def get_terrain(self):
+		return self.terrain
 		
 	def update_fov(self, x, y, radius):
 		self.fov = map_compute_fov(self.fov_map, x, y, True, radius)
@@ -51,10 +57,10 @@ class Region(object):
 		rooms = []
 		num_rooms = 0
 	
-		for r in range(MAX_ROOMS):
+		for r in range(self.max_rooms):
 			#random width and height
-			w = random.randint(ROOM_MIN_SIZE, ROOM_MAX_SIZE)
-			h = random.randint(ROOM_MIN_SIZE, ROOM_MAX_SIZE)
+			w = random.randint(self.room_min_size, self.room_max_size)
+			h = random.randint(self.room_min_size, self.room_max_size)
 			#random position without going out of the boundaries of the map
 			x = random.randint(0, width - w - 1)
 			y = random.randint(0, height - h - 1)
@@ -92,16 +98,26 @@ class Region(object):
 			for x in range(room.x1 + 1, room.x2):
 				self.terrain[y][x].blocked = False
 				self.terrain[y][x].block_sight = False
+		#walls
+		for y in range(room.y1, room.y2 + 1):
+			self.terrain[y][room.x1].connections = '1010'
+			self.terrain[y][room.x2].connections = '1010'
+		#walls
+		for x in range(room.x1, room.x2 + 1):
+			self.terrain[room.y1][x].connections = '0101'
+			self.terrain[room.y2][x].connections = '0101'
 	
 	def create_h_tunnel(self, x1, x2, y):
 		#horizontal tunnel. min() and max() are used in case x1>x2
 		for x in range(min(x1, x2), max(x1, x2) + 1):
+			self.terrain[y][x].connections = '0000'
 			self.terrain[y][x].blocked = False
 			self.terrain[y][x].block_sight = False
 	
 	def create_v_tunnel(self, y1, y2, x):
 		#vertical tunnel
 		for y in range(min(y1, y2), max(y1, y2) + 1):
+			self.terrain[y][x].connections = '0000'
 			self.terrain[y][x].blocked = False
 			self.terrain[y][x].block_sight = False
 			

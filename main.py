@@ -1,19 +1,62 @@
 #!/usr/bin/python
+import sys
 import config
 import gm.gm as GM
 
-if config.RENDER == 'libtcod':
+opt = sys.argv[1] if len(sys.argv) > 1 else config.RENDER
+
+if opt == '--blocky':
 	import uiblocky.render as G
 else:
 	import uiterminal.render as G
+	
+VP = None
+
+class Viewport(object):
+	def __init__(self, x = 0, y = 0):
+		self.scr_width	= config.SCREEN_WIDTH
+		self.scr_height	= config.SCREEN_HEIGHT
+		self.reg_width	= config.MAP_WIDTH
+		self.reg_height	= config.MAP_HEIGHT
+		self.x			= x
+		self.y			= y
+	def move_to(self, x, y):
+	
+		if x < 0:
+			x = 0
+		elif x > self.reg_width - 1:
+			x = self.reg_width - self.scr_width
+			 
+		if y < 0:
+			y = 0
+		elif y > self.reg_height - 1:
+			y = self.reg_width - self.scr_width
+		
+		self.x = x
+		self.y = y
+		
+	def move(self, xyz):
+		x,y,z = xyz
+		self.x += x
+		self.y += y
+		
+	def center_at(self, x, y):
+		cx = x - int(self.scr_width / 2)
+		cy = y - int(self.scr_height / 2) 
+		self.move_to(cx, cy)		
 
 def exit():
 	G.cleanup()
 	quit()
 	
-def init():	
+def init():
+	global VP
 	GM.init()
 	G.init()
+	
+	VP = Viewport()
+	VP.center_at(GM.EGO.x, GM.EGO.y)
+	
 	G.intro()
 	G.options()
 
@@ -36,6 +79,7 @@ def handle_user_input(ui):
 	if xyz != (0,0,0):
 		GM.EGO.is_updated = False
 		GM.move_ego(xyz)
+		VP.center_at(GM.EGO.x, GM.EGO.y)
 	
 snapshot = None
 
@@ -51,6 +95,6 @@ while True:
 	handle_user_input(ui)
 	
 	snapshot = GM.snapshot()
-	G.render(snapshot)
+	G.render(VP, snapshot)
 	
 exit()

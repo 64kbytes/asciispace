@@ -10,9 +10,6 @@ KEYBOARD_MAP = {
 	'LEFT':		'a',
 	'RIGHT':	'd'
 }
-
-FOV_MAP = None
-SIGHT_MAP = None
 				
 def init():
 	global KEYBOARD_MAP
@@ -28,9 +25,6 @@ def options():
 
 def clear(snapshot = None):
 	sys.stderr.write("\x1b[2J\x1b[H")
-   
-def render(snapshot):
-	pass
 	
 def get_keyboard():
    #Returns a single character from standard input
@@ -45,78 +39,63 @@ def get_keyboard():
    
    return KEYBOARD_MAP.get(ch, None)
    
-def render(snapshot):
+def render(VP, snapshot):
 	clear()
-	world = snapshot['world'].terrain
-	fov = snapshot['world'].get_fov()
+	
+	region	= snapshot['region']
+	ego		= snapshot['ego']
+	cast	= snapshot['cast']
+	terrain	= region.get_terrain()
+	fov		= region.get_fov()
 	
 	radius = 10
 	
-	if not snapshot['ego'].is_updated:
-		fov = snapshot['world'].update_fov(snapshot['ego'].x, snapshot['ego'].y, radius)
+	#recompute FOV if needed (the player moved or something)
+	if not ego.is_updated or fov is None:
+		fov = region.update_fov(ego.x, ego.y, radius)
+		ego.is_updated = True
 	
-	board = [[' ' for y in range(config.MAP_WIDTH)] for x in range(config.MAP_HEIGHT)]
+	board = [[' ' for y in range(config.SCREEN_WIDTH)] for x in range(config.SCREEN_HEIGHT)]
 	
-	ox = snapshot['ego'].x - radius
-	oy = snapshot['ego'].y - radius
+	#ego fov origin	
+	ox = ego.x - radius
+	oy = ego.y - radius
+	
+	#viewport origin
+	ovx = VP.x
+	ovy = VP.y
 	
 	#explored
-	for y in range(config.MAP_HEIGHT):
-		for x in range(config.MAP_WIDTH):
+	for y in range(config.SCREEN_HEIGHT):
+		vy = y + ovy
+		if (vy > region.height - 1) or vy < 0:
+			break
+		for x in range(config.SCREEN_WIDTH):
+			vx = x + ovx
+			if (vx > region.width - 1) or vx < 0:
+				break
 		
-			if world[y][x].explored:
-				if world[y][x].block_sight:
+			if terrain[vy][vx].explored:
+				if terrain[vy][vx].block_sight:
 					board[y][x] =  unichr(0x2591) #shaded full block #circle unichr(0x0A66)
 				else:
 					board[y][x] =  ' '
 			
 			# in FOV area
-			if (ox < x < ox + (radius * 2)) and (oy < y < oy + (radius * 2)):
+			if (ox < vx < ox + (radius * 2)) and (oy < vy < oy + (radius * 2)):
 				# in FOV
-				if fov[y - oy][x - ox] > 0:
-					world[y][x].explored = True
-					if world[y][x].block_sight:
+				if fov[vy - oy][vx - ox] > 0:
+					terrain[vy][vx].explored = True
+					if terrain[vy][vx].block_sight:
 						board[y][x] = unichr(0x2588) #full block
 					else:
 						board[y][x] = unichr(0x02D1) #small dot
-				
-		
+								
+	board[ego.y - ovy][ego.x - ovx] = '@'
 					
-	board[snapshot['ego'].y][snapshot['ego'].x] = '@'
-					
-	for y in range(config.MAP_HEIGHT):
+	for y in range(config.SCREEN_HEIGHT):
 		print ''.join(board[y])
 			
-			
-		
-	"""		
-	for x in range(radius * 2):
-		if (ox + x >= config.MAP_WIDTH) or (ox + x < 0):
-			continue
-			
-		for y in range(radius * 2):
-			if oy + y >= config.MAP_HEIGHT or (oy + y < 0):
-				continue
-
-			# in FOV
-			if SIGHT_MAP[x][y] == 1:
-				snapshot['world'][ox + x][oy + y].explored = True
-				if world[ox + x][oy + y].block_sight:
-					board[oy + y][ox + x] = unichr(0x2588)
-				else:
-					board[oy + y][ox + x] = '.'
-			# out of FOV
-			else:
-				board[oy + y][ox + x] = '?' 
-				
-	board[snapshot['ego'].y][snapshot['ego'].x] = '@'
-					
-	for y in range(config.MAP_HEIGHT):
-		print ''.join(board[y])
-	"""
-		
-	
-
 	return True
 	   
 def cleanup():

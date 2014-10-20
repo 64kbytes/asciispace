@@ -4,9 +4,6 @@ import symbols as sym
 import math
 from algorithms.fov import *
 
-#DARK_WALL = ltc.Color(0, 0, 100)
-#DARK_GROUND = ltc.Color(50, 50, 150)
-
 DARK_WALL = ltc.grey
 DARK_GROUND = ltc.black
 EXPLORED_WALL = ltc.black
@@ -15,6 +12,7 @@ EXPLORED_GROUND = ltc.darkest_grey * .5
 LIGHT_WALL = ltc.Color(130, 110, 50)
 LIGHT_GROUND = ltc.Color(200, 180, 50)
 
+VWP		= None
 CON		= None
 UI		= None
 MOUSE	= None
@@ -28,22 +26,13 @@ KEYBOARD_MAP = {
 	'RIGHT':		ltc.KEY_RIGHT
 }
 
-FOV_MAP = None
-FOV_ALGO = 0  #default FOV algorithm
-FOV_LIGHT_WALLS = True
-TORCH_RADIUS = 10
-LIGHT_RADIUS = 5
-
 def init():
 	global SYMBOL_MAP, KEYBOARD_MAP, CON, UI, MOUSE, KEY
-	
 	w = config.SCREEN_WIDTH
 	h = config.SCREEN_HEIGHT
 	ltc.sys_set_fps(config.FPS)
 	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_ASCII_INROW | ltc.FONT_TYPE_GREYSCALE, 16, 16)
 	ltc.console_init_root(w, h, config.TITLE, False)
-
-
 	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
 	CON = ltc.console_new(w, h)
 	UI = ltc.console_new(w, 10)
@@ -95,49 +84,63 @@ def render_UI(snapshot):
 	
 	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 1, 0, 0, 0, 1, .5)
 
-def render(snapshot):
-		
-	world = snapshot['world'].terrain
-	fov = snapshot['world'].get_fov()
+def render(VP, snapshot):
+
+	region	= snapshot['region']
+	ego		= snapshot['ego']
+	cast	= snapshot['cast']
+	terrain	= region.get_terrain()
+	fov		= region.get_fov()
 	
 	ltc.console_clear(CON)
 	
 	radius = 20
 	
 	#recompute FOV if needed (the player moved or something)
-	if not snapshot['ego'].is_updated or snapshot['world'].fov is None:
-		fov = snapshot['world'].update_fov(snapshot['ego'].x, snapshot['ego'].y, radius)
-		snapshot['ego'].is_updated = True
-		
-	ox = snapshot['ego'].x - radius
-	oy = snapshot['ego'].y - radius
+	if not ego.is_updated or fov is None:
+		fov = region.update_fov(ego.x, ego.y, radius)
+		ego.is_updated = True
+	
+	#ego fov origin	
+	ox = ego.x - radius
+	oy = ego.y - radius
+	
+	#viewport origin
+	ovx = VP.x
+	ovy = VP.y
 	
 	#explored
-	for x in range(config.MAP_WIDTH):
-		for y in range(config.MAP_HEIGHT):
-		
-			if world[y][x].explored:
-				if world[y][x].block_sight:
+	for y in range(config.SCREEN_HEIGHT):
+		vy = y + ovy
+		if (vy > region.height - 1) or vy < 0:
+			break
+		for x in range(config.SCREEN_WIDTH):
+			vx = x + ovx
+			if (vx > region.width - 1) or vx < 0:
+				break
+				
+			if terrain[vy][vx].explored:
+				if terrain[vy][vx].block_sight:
 					ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
 				else:
 					ltc.console_set_char_background(CON, x, y, EXPLORED_GROUND, ltc.BKGND_SET)
 			
 			# in FOV area
-			if (ox < x < ox + (radius * 2)) and (oy < y < oy + (radius * 2)):
+			if (ox < vx < ox + (radius * 2)) and (oy < vy < oy + (radius * 2)):
 				# in FOV
-				if fov[y - oy][x - ox] > 0:
-					snapshot['world'].terrain[y][x].explored = True
-					if world[y][x].block_sight:
-						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * fov[y - oy][x - ox], ltc.BKGND_SET )
+				if fov[vy - oy][vx - ox] > 0:
+					terrain[vy][vx].explored = True
+					if terrain[vy][vx].block_sight:
+						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * fov[vy - oy][vx - ox], ltc.BKGND_SET )
 					else:
-						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * fov[y - oy][x - ox], ltc.BKGND_SET )
+						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * fov[vy - oy][vx - ox], ltc.BKGND_SET )
 	
 	#render characters
-	for cha in snapshot['cast']:
+	for cha in cast:
 		symbol = sym.get_symbol(cha)
 		ltc.console_set_default_foreground(CON, symbol.front_color)
-		ltc.console_set_char_background(CON, cha.x, cha.y, symbol.back_color, ltc.BKGND_SET )
-		ltc.console_put_char(CON, cha.x, cha.y, symbol.char, ltc.BKGND_SET)
+		ltc.console_set_char_background(CON, cha.x - ovx, cha.y - ovy, symbol.back_color, ltc.BKGND_SET )
+		ltc.console_put_char(CON, cha.x - ovx, cha.y - ovy, symbol.char, ltc.BKGND_SET)
 			
 	ltc.console_blit(CON, 0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT, 0, 0, 0)
 	
@@ -149,4 +152,4 @@ def render(snapshot):
 def cleanup():
 	global CON
 	ltc.console_clear(CON)
-	 
+		
