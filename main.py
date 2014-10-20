@@ -43,7 +43,18 @@ class Viewport(object):
 	def center_at(self, x, y):
 		cx = x - int(self.scr_width / 2)
 		cy = y - int(self.scr_height / 2) 
-		self.move_to(cx, cy)		
+		self.move_to(cx, cy)
+	
+	def pos(self, x, y):
+		px = x - self.x
+		py = y - self.y 
+		return (px,py)
+		
+	def is_leaving(self, x, y):
+		boundary = 5
+		px,py = self.pos(x, y)
+		return not ((self.scr_width - boundary) > px > boundary) or ((self.scr_height - boundary) > py > boundary)
+			
 
 def exit():
 	G.cleanup()
@@ -77,9 +88,10 @@ def handle_user_input(ui):
 	elif ui == 'RIGHT':	xyz = (1, 0, 0)
 
 	if xyz != (0,0,0):
-		GM.EGO.is_updated = False
-		GM.move_ego(xyz)
-		VP.center_at(GM.EGO.x, GM.EGO.y)
+		if GM.move_ego(xyz):
+			GM.EGO.is_updated = False
+			if VP.is_leaving(GM.EGO.x, GM.EGO.y):
+				VP.move(xyz)
 	
 snapshot = None
 

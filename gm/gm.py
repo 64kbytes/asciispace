@@ -41,6 +41,8 @@ def move_ego(xyz):
 	if nx < config.MAP_WIDTH and ny < config.MAP_HEIGHT:	
 		if not REGION.terrain[ny][nx].blocked:
 			EGO.move(xyz)
+			return True
+	return False
 	
 def cycle():
 	pass
