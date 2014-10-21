@@ -37,6 +37,12 @@ class Viewport(object):
 		
 	def move(self, xyz):
 		x,y,z = xyz
+		
+		if ((self.x + x) < 0 or (self.x + x) > self.reg_width):
+			return
+		if ((self.y + y) < 0 or (self.y + y) > self.reg_height):
+			return
+		
 		self.x += x
 		self.y += y
 		
@@ -51,11 +57,10 @@ class Viewport(object):
 		return (px,py)
 		
 	def is_leaving(self, x, y):
-		boundary = 5
+		boundary = 10
 		px,py = self.pos(x, y)	
-		return not (((self.scr_width - boundary) > px > boundary) and ((self.scr_height - boundary) > py > boundary))
+		return (not ((self.scr_width - boundary) > px > boundary), not (self.scr_height - boundary) > py > boundary)
 			
-
 def exit():
 	G.cleanup()
 	quit()
@@ -90,8 +95,12 @@ def handle_user_input(ui):
 	if xyz != (0,0,0):
 		if GM.move_ego(xyz):
 			GM.EGO.is_updated = False
-			if VP.is_leaving(GM.EGO.x, GM.EGO.y):
-				VP.move(xyz)
+			leaving_x, leaving_y = VP.is_leaving(GM.EGO.x, GM.EGO.y)					
+			dx = xyz[0] if leaving_x else 0
+			dy = xyz[1] if leaving_y else 0
+			dz = xyz[2]
+			
+			VP.move((dx, dy, dz))
 	
 snapshot = None
 

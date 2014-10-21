@@ -10,6 +10,11 @@ KEYBOARD_MAP = {
 	'LEFT':		'a',
 	'RIGHT':	'd'
 }
+
+def trunc(f, n):
+	'''Truncates/pads a float f to n decimal places without rounding'''
+	slen = len('%.*f' % (n, f))
+	return str(f)[:slen]
 				
 def init():
 	global KEYBOARD_MAP
@@ -74,7 +79,7 @@ def render(VP, snapshot):
 			vx = x + ovx
 			if (vx > region.width - 1) or vx < 0:
 				break
-		
+
 			if terrain[vy][vx].explored:
 				if terrain[vy][vx].block_sight:
 					board[y][x] =  unichr(0x2591) #shaded full block #circle unichr(0x0A66)

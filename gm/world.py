@@ -10,16 +10,63 @@ LIGHTS = []
 class Tile:
 	#a tile of the map and its properties
 	def __init__(self, blocked, block_sight = None, explored = False):
-		self.height			= None
-		self.blocked		= blocked
-		self.explored		= explored
-		self.connections	= '0000'
+		self.height = None
+		self.blocked = blocked
+		self.explored = explored
+		self.connections = '0000'
 		#by default, if a tile is blocked, it also blocks sight
 		if block_sight is None: block_sight = blocked
 		self.block_sight = block_sight
 
 class Planet(object):
-	pass
+	def __init__(self):
+		self.name = 'Earth'
+	
+	def create(self, i = 0, h = 1.0, v = .5):
+		sq = int(math.pow(2, i))			#square divisions in this iteration: 1, 2, 4, 8, 16, 32, 64, ...
+		ln = (len(self.terrain) - 1) / sq	#square side length
+		
+		if not ln > 1:
+			return
+
+		r = random.uniform(-h, h)
+		h = h * v
+		
+		#iterate through squares
+		for y in range(sq):
+			for x in range(sq):
+				#coordinates
+				cy, cx = ((y * ln) + (ln / 2), (x * ln) + (ln / 2))
+				ny, nx = (y * ln, (x * ln) + (ln / 2))
+				ey, ex = ((y * ln) + (ln / 2), (x * ln) + ln)
+				sy, sx = ((y * ln) + ln, (x * ln) + (ln / 2))
+				wy, wx = ((y * ln) + (ln / 2), x * ln)
+				nwy, nwx = (y * ln, x * ln) 
+				ney, nex = (y * ln, (x * ln) + ln)
+				sey, sex = ((y * ln) + ln, (x * ln) + ln)
+				swy, swx = ((y * ln) + ln, x * ln)
+				#square
+				s = (self.terrain[nwy][nwx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 4	
+				self.terrain[cy][cx].height = s + r
+				#diamond
+				if self.terrain[ny][nx].height is None:
+					n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][nex].height) / 3
+					self.terrain[ny][nx].height = n + r
+				if self.terrain[ey][ex].height is None:
+					e = (self.terrain[cy][cx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height) / 3
+					self.terrain[ey][ex].height = e + r
+				if self.terrain[sy][sx].height is None:
+					s = (self.terrain[cy][cx].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 3
+					self.terrain[sy][sx].height = s + r
+				if self.terrain[wy][wx].height is None:
+					w = (self.terrain[cy][cx].height + self.terrain[swy][swx].height + self.terrain[nwy][nwx].height) / 3
+					self.terrain[wy][wx].height = w + r
+								
+		i += 1
+		self.create_terrain(i, h)
+		
+		
+	
 
 class Region(object):
 	def __init__(self, width, height):
@@ -30,17 +77,17 @@ class Region(object):
 		#parameters for dungeon generator
 		self.room_max_size = 10
 		self.room_min_size = 6
-		self.max_rooms = 120
+		self.max_rooms = 160
 			
 		#fill map with "blocked" tiles
-		self.terrain = [[ Tile(False)
+		self.terrain = [[ Tile(True)
 			for x in range(width) ]
 				for y in range(height) ]
 		
-		self.seed_terrain()
-		self.create_terrain()
+		#self.seed_terrain()
+		#self.create_terrain()
 		
-		#self.create_dungeon(width, height)		
+		self.create_dungeon(width, height)		
 		self.fov_map = set_fov_map(self.terrain)
 		self.fov = None
 		
@@ -104,26 +151,16 @@ class Region(object):
 			for x in range(room.x1 + 1, room.x2):
 				self.terrain[y][x].blocked = False
 				self.terrain[y][x].block_sight = False
-		#walls
-		for y in range(room.y1, room.y2 + 1):
-			self.terrain[y][room.x1].connections = '1010'
-			self.terrain[y][room.x2].connections = '1010'
-		#walls
-		for x in range(room.x1, room.x2 + 1):
-			self.terrain[room.y1][x].connections = '0101'
-			self.terrain[room.y2][x].connections = '0101'
 	
 	def create_h_tunnel(self, x1, x2, y):
 		#horizontal tunnel. min() and max() are used in case x1>x2
 		for x in range(min(x1, x2), max(x1, x2) + 1):
-			self.terrain[y][x].connections = '0000'
 			self.terrain[y][x].blocked = False
 			self.terrain[y][x].block_sight = False
 	
 	def create_v_tunnel(self, y1, y2, x):
 		#vertical tunnel
 		for y in range(min(y1, y2), max(y1, y2) + 1):
-			self.terrain[y][x].connections = '0000'
 			self.terrain[y][x].blocked = False
 			self.terrain[y][x].block_sight = False
 			
@@ -133,58 +170,46 @@ class Region(object):
 		self.terrain[-1][-1].height = random.random() 
 		self.terrain[-1][0].height = random.random()
 	
-	def create_terrain(self, i = 0, H = 1):
-		sq = int(math.pow(2, i))
-		ln = (len(self.terrain) - 1) / sq
+	def create_terrain(self, i = 0, h = 1.0, v = .5):
+		sq = int(math.pow(2, i))			#square divisions in this iteration: 1, 2, 4, 8, 16, 32, 64, ...
+		ln = (len(self.terrain) - 1) / sq	#square side length
 		
-		if not ln >= 1:
+		if not ln > 1:
 			return
-					
+
+		r = random.uniform(-h, h)
+		h = h * v
+		
+		#
 		for y in range(sq):
 			for x in range(sq):
 				#coordinates
-				cy, cx = (y * (ln / 2), x * (ln / 2))
-				ny, nx = (y * ln, x * ln + (ln / 2))
-				ey, ex = (y * ln + (ln / 2), (x * ln) + ln)
-				sy, sx = ((y * ln) + ln, x * ln + (ln / 2))
+				cy, cx = ((y * ln) + (ln / 2), (x * ln) + (ln / 2))
+				ny, nx = (y * ln, (x * ln) + (ln / 2))
+				ey, ex = ((y * ln) + (ln / 2), (x * ln) + ln)
+				sy, sx = ((y * ln) + ln, (x * ln) + (ln / 2))
 				wy, wx = ((y * ln) + (ln / 2), x * ln)
 				nwy, nwx = (y * ln, x * ln) 
 				ney, nex = (y * ln, (x * ln) + ln)
 				sey, sex = ((y * ln) + ln, (x * ln) + ln)
-				swy, swx = ((y * ln) + ln, x * ln)	
-
+				swy, swx = ((y * ln) + ln, x * ln)
 				#square
 				s = (self.terrain[nwy][nwx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 4	
-				self.terrain[cy][cx].height = s
-				#diamond	
-				self.terrain[ny][nx].height = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height) / 2
-				self.terrain[ey][ex].height = (self.terrain[cy][cx].height + self.terrain[ney][nex].height) / 2
-				self.terrain[sy][sx].height = (self.terrain[cy][cx].height + self.terrain[sey][sex].height) / 2
-				self.terrain[wy][wx].height = (self.terrain[cy][cx].height + self.terrain[swy][swx].height) / 2
+				self.terrain[cy][cx].height = s + r
+				#diamond
+				if self.terrain[ny][nx].height is None:
+					n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][nex].height) / 3
+					self.terrain[ny][nx].height = n + r
+				if self.terrain[ey][ex].height is None:
+					e = (self.terrain[cy][cx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height) / 3
+					self.terrain[ey][ex].height = e + r
+				if self.terrain[sy][sx].height is None:
+					s = (self.terrain[cy][cx].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 3
+					self.terrain[sy][sx].height = s + r
+				if self.terrain[wy][wx].height is None:
+					w = (self.terrain[cy][cx].height + self.terrain[swy][swx].height + self.terrain[nwy][nwx].height) / 3
+					self.terrain[wy][wx].height = w + r
 								
 		i += 1
-		self.create_terrain(i)
-				
-				
-		
-		"""
-		while (ln / ) >= 1:
-										
-			
-			
-			#nw square
-		
-			i += 1
-		"""
+		self.create_terrain(i, h)
 
-		
-		
-		
-		
-		
-		
-		
-		
-		
-
-			

@@ -1,12 +1,12 @@
 TITLE			= 'Space Odyssey'
 VER				= '0.0.1'
-#RENDER			= '--terminal'
-RENDER			= '--blocky'
+RENDER			= '--terminal'
+#RENDER			= '--blocky'
 SCREEN_WIDTH	= 80
 SCREEN_HEIGHT	= 50
 FPS				= 20
-MAP_WIDTH		= 17
-MAP_HEIGHT		= 17
+MAP_WIDTH		= 80
+MAP_HEIGHT		= 50
 #TILE_SET		= 'assets/dejavu16x16_gs_tc.png'
 #TILE_SET		= 'assets/unknown_inrow.png'
 #TILE_SET		= 'assets/arial10x10.png'
