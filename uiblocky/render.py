@@ -119,6 +119,9 @@ def render(VP, snapshot):
 			if (vx > region.width - 1) or vx < 0:
 				break
 				
+			ltc.console_set_char_background(CON, x, y, ltc.green * terrain[vy][vx].height, ltc.BKGND_SET)
+			
+			"""	
 			if terrain[vy][vx].explored:
 				if terrain[vy][vx].block_sight:
 					ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
@@ -134,6 +137,7 @@ def render(VP, snapshot):
 						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * fov[vy - oy][vx - ox], ltc.BKGND_SET )
 					else:
 						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * fov[vy - oy][vx - ox], ltc.BKGND_SET )
+			"""
 	
 	#render characters
 	for cha in cast:
