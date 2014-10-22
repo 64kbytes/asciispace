@@ -21,52 +21,6 @@ class Tile:
 class Planet(object):
 	def __init__(self):
 		self.name = 'Earth'
-	
-	def create(self, i = 0, h = 1.0, v = .5):
-		sq = int(math.pow(2, i))			#square divisions in this iteration: 1, 2, 4, 8, 16, 32, 64, ...
-		ln = (len(self.terrain) - 1) / sq	#square side length
-		
-		if not ln > 1:
-			return
-
-		r = random.uniform(-h, h)
-		h = h * v
-		
-		#iterate through squares
-		for y in range(sq):
-			for x in range(sq):
-				#coordinates
-				cy, cx = ((y * ln) + (ln / 2), (x * ln) + (ln / 2))
-				ny, nx = (y * ln, (x * ln) + (ln / 2))
-				ey, ex = ((y * ln) + (ln / 2), (x * ln) + ln)
-				sy, sx = ((y * ln) + ln, (x * ln) + (ln / 2))
-				wy, wx = ((y * ln) + (ln / 2), x * ln)
-				nwy, nwx = (y * ln, x * ln) 
-				ney, nex = (y * ln, (x * ln) + ln)
-				sey, sex = ((y * ln) + ln, (x * ln) + ln)
-				swy, swx = ((y * ln) + ln, x * ln)
-				#square
-				s = (self.terrain[nwy][nwx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 4	
-				self.terrain[cy][cx].height = s + r
-				#diamond
-				if self.terrain[ny][nx].height is None:
-					n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][nex].height) / 3
-					self.terrain[ny][nx].height = n + r
-				if self.terrain[ey][ex].height is None:
-					e = (self.terrain[cy][cx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height) / 3
-					self.terrain[ey][ex].height = e + r
-				if self.terrain[sy][sx].height is None:
-					s = (self.terrain[cy][cx].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 3
-					self.terrain[sy][sx].height = s + r
-				if self.terrain[wy][wx].height is None:
-					w = (self.terrain[cy][cx].height + self.terrain[swy][swx].height + self.terrain[nwy][nwx].height) / 3
-					self.terrain[wy][wx].height = w + r
-								
-		i += 1
-		self.create_terrain(i, h)
-		
-		
-	
 
 class Region(object):
 	def __init__(self, width, height):
@@ -80,14 +34,14 @@ class Region(object):
 		self.max_rooms = 160
 			
 		#fill map with "blocked" tiles
-		self.terrain = [[ Tile(True)
+		self.terrain = [[ Tile(False)
 			for x in range(width) ]
 				for y in range(height) ]
 		
-		#self.seed_terrain()
-		#self.create_terrain()
+		self.seed_terrain()
+		self.create_terrain()
 		
-		self.create_dungeon(width, height)		
+		#self.create_dungeon(width, height)		
 		self.fov_map = set_fov_map(self.terrain)
 		self.fov = None
 		
@@ -165,22 +119,21 @@ class Region(object):
 			self.terrain[y][x].block_sight = False
 			
 	def seed_terrain(self):
-		self.terrain[0][0].height = random.random()
-		self.terrain[0][-1].height = random.random()
-		self.terrain[-1][-1].height = random.random() 
-		self.terrain[-1][0].height = random.random()
+		self.terrain[0][0].height = random.uniform(-1.0, 1.0)
+		self.terrain[0][-1].height = random.uniform(-1.0, 1.0)
+		self.terrain[-1][-1].height = random.uniform(-1.0, 1.0)
+		self.terrain[-1][0].height = random.uniform(-1.0, 1.0)
 	
-	def create_terrain(self, i = 0, h = 1.0, v = .5):
+	def create_terrain(self, i = 0, h = .8, d = 1.0):
 		sq = int(math.pow(2, i))			#square divisions in this iteration: 1, 2, 4, 8, 16, 32, 64, ...
 		ln = (len(self.terrain) - 1) / sq	#square side length
 		
 		if not ln > 1:
 			return
-
-		r = random.uniform(-h, h)
-		h = h * v
-		
-		#
+			
+		r = random.uniform(-d, d)
+		d *= math.pow(2, -h)
+			
 		for y in range(sq):
 			for x in range(sq):
 				#coordinates
@@ -193,10 +146,10 @@ class Region(object):
 				ney, nex = (y * ln, (x * ln) + ln)
 				sey, sex = ((y * ln) + ln, (x * ln) + ln)
 				swy, swx = ((y * ln) + ln, x * ln)
-				#square
-				s = (self.terrain[nwy][nwx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 4	
-				self.terrain[cy][cx].height = s + r
-				#diamond
+			
+				if self.terrain[cy][cx].height is None:
+					c = (self.terrain[nwy][nwx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 4	
+					self.terrain[cy][cx].height = c + r
 				if self.terrain[ny][nx].height is None:
 					n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][nex].height) / 3
 					self.terrain[ny][nx].height = n + r
@@ -209,7 +162,7 @@ class Region(object):
 				if self.terrain[wy][wx].height is None:
 					w = (self.terrain[cy][cx].height + self.terrain[swy][swx].height + self.terrain[nwy][nwx].height) / 3
 					self.terrain[wy][wx].height = w + r
-								
+					
 		i += 1
-		self.create_terrain(i, h)
+		self.create_terrain(i, h, d)
 

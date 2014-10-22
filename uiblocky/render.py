@@ -31,7 +31,10 @@ def init():
 	w = config.SCREEN_WIDTH
 	h = config.SCREEN_HEIGHT
 	ltc.sys_set_fps(config.FPS)
-	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_ASCII_INROW | ltc.FONT_TYPE_GREYSCALE, 16, 16)
+	
+	#ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_ASCII_INROW | ltc.FONT_TYPE_GREYSCALE, 16, 16)
+	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_TCOD | ltc.FONT_TYPE_GREYSCALE, 32, 8)
+	
 	ltc.console_init_root(w, h, config.TITLE, False)
 	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
 	CON = ltc.console_new(w, h)
@@ -119,7 +122,7 @@ def render(VP, snapshot):
 			if (vx > region.width - 1) or vx < 0:
 				break
 				
-			ltc.console_set_char_background(CON, x, y, ltc.green * terrain[vy][vx].height, ltc.BKGND_SET)
+			ltc.console_set_char_background(CON, x, y, ltc.white * terrain[vy][vx].height, ltc.BKGND_SET)
 			
 			"""	
 			if terrain[vy][vx].explored:
