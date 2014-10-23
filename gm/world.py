@@ -117,6 +117,19 @@ class Region(object):
 		for y in range(min(y1, y2), max(y1, y2) + 1):
 			self.terrain[y][x].blocked = False
 			self.terrain[y][x].block_sight = False
+	
+	def square_points(self, x, y, length):
+		return {
+			'N': (x + length / 2, y),
+			'E': (x + length, y + length / 2),
+			'S': (x + length / 2, y + length),
+			'W': (x, y + length / 2),
+			'NW': (x,y),
+			'NE': (x + length, y), 
+			'SE': (x + length, y + length), 
+			'SW': (x, y + length), 
+			'CN': (x + length / 2, y + length / 2)
+		}
 			
 	def seed_terrain(self):
 		self.terrain[0][0].height = random.uniform(-1.0, 1.0)
@@ -124,45 +137,67 @@ class Region(object):
 		self.terrain[-1][-1].height = random.uniform(-1.0, 1.0)
 		self.terrain[-1][0].height = random.uniform(-1.0, 1.0)
 	
-	def create_terrain(self, i = 0, h = .8, d = 1.0):
+	def create_terrain(self, i = 0, d = 255, h = .7):
+		
+		wrap = False
+	
 		sq = int(math.pow(2, i))			#square divisions in this iteration: 1, 2, 4, 8, 16, 32, 64, ...
-		ln = (len(self.terrain) - 1) / sq	#square side length
+		ln = (self.width - 1) / sq	#square side length
 		
 		if not ln > 1:
 			return
 			
-		r = random.uniform(-d, d)
-		d *= math.pow(2, -h)
+		d = d * math.pow(2, -h)
 			
 		for y in range(sq):
 			for x in range(sq):
+				r = random.uniform(-d, d)
+				p = self.square_points(x * ln, y * ln, ln)
+				
 				#coordinates
-				cy, cx = ((y * ln) + (ln / 2), (x * ln) + (ln / 2))
-				ny, nx = (y * ln, (x * ln) + (ln / 2))
-				ey, ex = ((y * ln) + (ln / 2), (x * ln) + ln)
-				sy, sx = ((y * ln) + ln, (x * ln) + (ln / 2))
-				wy, wx = ((y * ln) + (ln / 2), x * ln)
-				nwy, nwx = (y * ln, x * ln) 
-				ney, nex = (y * ln, (x * ln) + ln)
-				sey, sex = ((y * ln) + ln, (x * ln) + ln)
-				swy, swx = ((y * ln) + ln, x * ln)
+				cx, cy = p['CN']					
+				nx, ny = p['N']
+				ex, ey = p['E']
+				sx, sy = p['S']
+				wx, wy = p['W']
+				nwx, nwy = p['NW'] 
+				nex, ney = p['NE']
+				sex, sey = p['SE']
+				swx, swy = p['SW']
+				
 			
+				
+				#center										
 				if self.terrain[cy][cx].height is None:
 					c = (self.terrain[nwy][nwx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 4	
 					self.terrain[cy][cx].height = c + r
+				#north
 				if self.terrain[ny][nx].height is None:
-					n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][nex].height) / 3
+					if nex == (self.width - 1) and self.terrain[ney][0].height is not None:
+						n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][0].height) / 3
+					else:
+						n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][nex].height) / 3
 					self.terrain[ny][nx].height = n + r
+				#east
 				if self.terrain[ey][ex].height is None:
-					e = (self.terrain[cy][cx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height) / 3
+					if ex == (self.width - 1) and self.terrain[ey][0].height is not None:
+						e = self.terrain[ey][0].height
+					else:
+						e = (self.terrain[cy][cx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height) / 3
 					self.terrain[ey][ex].height = e + r
+				#south
 				if self.terrain[sy][sx].height is None:
-					s = (self.terrain[cy][cx].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 3
+					if sex == (self.width - 1) and self.terrain[sey][0].height is not None:
+						s = (self.terrain[cy][cx].height + self.terrain[sey][0].height + self.terrain[swy][swx].height) / 3
+					else:
+						s = (self.terrain[cy][cx].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 3
 					self.terrain[sy][sx].height = s + r
+				#west
 				if self.terrain[wy][wx].height is None:
 					w = (self.terrain[cy][cx].height + self.terrain[swy][swx].height + self.terrain[nwy][nwx].height) / 3
 					self.terrain[wy][wx].height = w + r
-					
+			
+				
 		i += 1
-		self.create_terrain(i, h, d)
+		self.create_terrain(i, d, h)
 

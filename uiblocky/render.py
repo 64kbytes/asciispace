@@ -122,7 +122,13 @@ def render(VP, snapshot):
 			if (vx > region.width - 1) or vx < 0:
 				break
 				
-			ltc.console_set_char_background(CON, x, y, ltc.white * terrain[vy][vx].height, ltc.BKGND_SET)
+			if terrain[vy][vx].height < -990:
+				ltc.console_set_char_background(CON, x, y, ltc.Color(255, 0, 0), ltc.BKGND_SET)
+				continue
+			
+			h = int(terrain[vy][vx].height)
+							
+			ltc.console_set_char_background(CON, x, y, ltc.Color(0, h, 0), ltc.BKGND_SET)
 			
 			"""	
 			if terrain[vy][vx].explored:
