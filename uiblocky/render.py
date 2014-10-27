@@ -63,8 +63,7 @@ def get_keyboard():
 			return v
 
 def get_mouse():
-	(x, y) = (MOUSE.cx, MOUSE.cy)
-	return (x, y)
+	return MOUSE
 
 def clear(snapshot):
 	for cha in snapshot['cast']:
@@ -81,9 +80,11 @@ def render_UI(snapshot):
 		if obj.x == x and obj.y == y and True]
 	names = ', '.join(names)
 	
+	coord = str(snapshot['region'].terrain[y][x].x) + ':' + str(snapshot['region'].terrain[y][x].y)
+	
 	ltc.console_set_default_background(UI, ltc.white)
 	ltc.console_set_default_foreground(UI, ltc.black)
-	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, names)
+	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, coord + ' ' + names)
 	
 	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 1, 0, 0, 0, 1, .5)
 
@@ -121,16 +122,12 @@ def render(VP, snapshot):
 			vx = x + ovx
 			if (vx > region.width - 1) or vx < 0:
 				break
-				
-			if terrain[vy][vx].height < -990:
-				ltc.console_set_char_background(CON, x, y, ltc.Color(255, 0, 0), ltc.BKGND_SET)
-				continue
-			
+						
 			h = int(terrain[vy][vx].height)
 							
 			ltc.console_set_char_background(CON, x, y, ltc.Color(0, h, 0), ltc.BKGND_SET)
 			
-			"""	
+			"""
 			if terrain[vy][vx].explored:
 				if terrain[vy][vx].block_sight:
 					ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)

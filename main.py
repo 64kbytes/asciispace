@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import sys
+import math
 import config
 import gm.gm as GM
 
@@ -13,7 +14,8 @@ else:
 VP = None
 
 class Viewport(object):
-	def __init__(self, x = 0, y = 0):
+	def __init__(self, scene, x = 0, y = 0):
+		self.scene		= scene
 		self.scr_width	= config.SCREEN_WIDTH
 		self.scr_height	= config.SCREEN_HEIGHT
 		self.reg_width	= config.MAP_WIDTH
@@ -58,8 +60,18 @@ class Viewport(object):
 		
 	def is_leaving(self, x, y):
 		boundary = 10
-		px,py = self.pos(x, y)	
-		return (not ((self.scr_width - boundary) > px > boundary), not (self.scr_height - boundary) > py > boundary)
+		px,py = self.pos(x, y)
+			
+		leaving_x = ((px > (self.scr_width - boundary)) and (self.x < self.scr_width - 1)) or ((px < boundary) and self.x > 0)
+		leaving_y = ((py > (self.scr_height - boundary)) and (self.y < self.scr_height - 1)) or ((py < boundary) and self.y > 0)
+			
+		return (leaving_x, leaving_y) 
+		
+	def zoom_in(self, pos, z):
+		self.scene.zoom_in(pos, z)
+		
+	def zoom_out(self):
+		self.scene.zoom_out()
 			
 def exit():
 	G.cleanup()
@@ -70,7 +82,7 @@ def init():
 	GM.init()
 	G.init()
 	
-	VP = Viewport()
+	VP = Viewport(GM.get_region())
 	VP.center_at(GM.EGO.x, GM.EGO.y)
 	
 	G.intro()
@@ -79,6 +91,17 @@ def init():
 init()
 
 def handle_user_input(ui):
+	
+	#mouse
+	m = G.get_mouse()
+	
+	if m.lbutton_pressed:
+		pos = (int(math.floor(m.x / 10)), int(math.floor(m.y / 10)))
+		VP.zoom_in(pos, 2)
+		
+	if m.rbutton_pressed:
+		VP.zoom_out()
+		
 	
 	if ui is None: 
 		GM.EGO.is_updated = True if GM.EGO.is_updated is not None else False
@@ -105,7 +128,7 @@ def handle_user_input(ui):
 snapshot = None
 
 while True:
-	
+		
 	#if snapshot is not None:
 	#	G.clear(snapshot)
 	

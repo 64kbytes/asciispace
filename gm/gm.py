@@ -27,6 +27,9 @@ def create_npc():
 def get_ego():
 	return EGO
 	
+def get_region():
+	return REGION
+	
 def snapshot():			
 	return {
 		'region':	REGION,
@@ -38,7 +41,7 @@ def move_ego(xyz):
 	nx = EGO.x + xyz[0]
 	ny = EGO.y + xyz[1]
 
-	if nx < config.MAP_WIDTH and ny < config.MAP_HEIGHT:	
+	if nx < config.MAP_WIDTH and ny < config.MAP_HEIGHT and nx >= 0 and ny >= 0:	
 		if not REGION.terrain[ny][nx].blocked:
 			EGO.move(xyz)
 			return True
