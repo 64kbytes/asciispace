@@ -41,7 +41,7 @@ class Region(object):
 		self.max_rooms = 160
 		self.zoom = 0
 					
-		self.cache[self.zoom] = self.get_empty_region(width, height)
+		self.cache[self.zoom] = self.get_empty_region(0, 0, width, height)
 		self.terrain = self.cache[self.zoom]
 		
 		self.seed_terrain()
@@ -52,9 +52,9 @@ class Region(object):
 		self.fov = None
 
 		
-	def get_empty_region(self, width, height):
+	def get_empty_region(self, x0, y0, width, height):
 		#fill map with "blocked" tiles
-		return [[ Tile(False, int(x * math.pow(2, Region.max_zoom - self.zoom)), int(y * math.pow(2, Region.max_zoom - self.zoom)))
+		return [[ Tile(False, x0 + int(x * math.pow(2, Region.max_zoom - self.zoom)), y0 + int(y * math.pow(2, Region.max_zoom - self.zoom)))
 			for x in range(width) ]
 				for y in range(height) ]
 		
@@ -158,7 +158,8 @@ class Region(object):
 		self.zoom += 1
 					
 		x0,y0 = pos
-		l = int((self.width - 1) / math.pow(2,f))
+		l = int((self.width - 1) / math.pow(2, f-1))
+		s = (self.width - 1) / l
 
 		x0 -= l/2
 		y0 -= l/2
@@ -168,9 +169,10 @@ class Region(object):
 		if (x0 + l) > (self.width - 1): x0 = (self.width - 1) - l
 		if (y0 + l) > (self.height - 1): y0 = (self.height - 1) - l
 				
-		s = (self.width - 1) / l
 				
-		exp = self.get_empty_region(self.width, self.height);
+		nx0, ny0 = (self.terrain[y0][x0].x, self.terrain[y0][x0].y)
+				
+		exp = self.get_empty_region(nx0, ny0, self.width, self.height);
 	
 		for y in range(y0, y0+l + 1):
 			for x in range(x0, x0+l + 1):
@@ -178,7 +180,7 @@ class Region(object):
 				oy = y - y0
 
 				exp[oy * s][ox * s] = self.terrain[y][x]
-		
+	
 		self.terrain = exp
 		self.create_terrain(False, 0, 128 * (1 / self.zoom), 0.8)
 		self.cache[self.zoom] = self.terrain
