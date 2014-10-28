@@ -13,7 +13,7 @@ def init():
 
 def create_world():
 	global REGION
-	REGION = wrl.Region(config.MAP_WIDTH, config.MAP_HEIGHT)
+	REGION = wrl.Region(config.MAP_WIDTH)
 	
 def create_ego():
 	global EGO

@@ -3,6 +3,7 @@ import math
 from algorithms.fov import *
 from algorithms.geometry import *
 from algorithms.terrain import *
+from debug import *
 
 PLAYER_XYZ = (20, 39, 0)
 LIGHTS = []
@@ -22,16 +23,22 @@ class Tile:
 		self.block_sight = block_sight
 
 class Planet(object):
-	def __init__(self):
+	max_zoom = 10
+	def __init__(self, length):
 		self.name = 'Earth'
+		self.zoom = 0
+		self.terrain = Region(length)
+		self.stack = [None for i in range(Region.max_zoom + 1)]
+		self.stack[self.zoom] = self.terrain
+		
+		
 
 class Region(object):
 	max_zoom = 10
 	
-	def __init__(self, width, height):
+	def __init__(self, length):
 	
-		self.width = width
-		self.height = height
+		self.length = length
 		self.cache = [None for i in range(Region.max_zoom + 1)]
 		self.seed = random.random()
 		
@@ -41,7 +48,7 @@ class Region(object):
 		self.max_rooms = 160
 		self.zoom = 0
 					
-		self.cache[self.zoom] = self.get_empty_region(0, 0, width, height)
+		self.cache[self.zoom] = self.get_empty_region(0, 0, length)
 		self.terrain = self.cache[self.zoom]
 		
 		self.seed_terrain()
@@ -52,11 +59,11 @@ class Region(object):
 		self.fov = None
 
 		
-	def get_empty_region(self, x0, y0, width, height):
+	def get_empty_region(self, x0, y0, length):
 		#fill map with "blocked" tiles
 		return [[ Tile(False, x0 + int(x * math.pow(2, Region.max_zoom - self.zoom)), y0 + int(y * math.pow(2, Region.max_zoom - self.zoom)))
-			for x in range(width) ]
-				for y in range(height) ]
+			for x in range(length) ]
+				for y in range(length) ]
 		
 	def get_fov_map(self):
 		return self.fov_map
@@ -158,21 +165,21 @@ class Region(object):
 		self.zoom += 1
 					
 		x0,y0 = pos
-		l = int((self.width - 1) / math.pow(2, f-1))
-		s = (self.width - 1) / l
+		l = int((self.length - 1) / math.pow(2, f-1))
+		s = (self.length - 1) / l
 
 		x0 -= l/2
 		y0 -= l/2
 		
 		if x0 < 0: x0 = 0
 		if y0 < 0: y0 = 0
-		if (x0 + l) > (self.width - 1): x0 = (self.width - 1) - l
-		if (y0 + l) > (self.height - 1): y0 = (self.height - 1) - l
+		if (x0 + l) > (self.length - 1): x0 = (self.length - 1) - l
+		if (y0 + l) > (self.length - 1): y0 = (self.length - 1) - l
 				
 				
 		nx0, ny0 = (self.terrain[y0][x0].x, self.terrain[y0][x0].y)
 				
-		exp = self.get_empty_region(nx0, ny0, self.width, self.height);
+		exp = self.get_empty_region(nx0, ny0, self.length);
 	
 		for y in range(y0, y0+l + 1):
 			for x in range(x0, x0+l + 1):
@@ -182,8 +189,9 @@ class Region(object):
 				exp[oy * s][ox * s] = self.terrain[y][x]
 	
 		self.terrain = exp
-		self.create_terrain(False, 0, 128 * (1 / self.zoom), 0.8)
+		self.create_terrain(False, 0, 128 * (2 / self.zoom), 0.8)
 		self.cache[self.zoom] = self.terrain
+		print memory()
 	
 	def zoom_out(self):
 		if self.zoom == 0:
@@ -196,7 +204,7 @@ class Region(object):
 	def create_terrain(self, wrap, i = 0, d = 128, h = .5):
 	
 		sq = int(math.pow(2, i))	#square divisions in this iteration: 1, 2, 4, 8, 16, 32, 64, ...
-		ln = (self.width - 1) / sq	#square side length
+		ln = (self.length - 1) / sq	#square side length
 		
 		if not ln > 1:
 			return
@@ -226,21 +234,21 @@ class Region(object):
 					self.terrain[cy][cx].height = c + r
 				#north
 				if self.terrain[ny][nx].height is None:
-					if nex == (self.width - 1) and self.terrain[ney][0].height is not None and wrap is True:
+					if nex == (self.length - 1) and self.terrain[ney][0].height is not None and wrap is True:
 						n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][0].height) / 3
 					else:
 						n = (self.terrain[cy][cx].height + self.terrain[nwy][nwx].height + self.terrain[ney][nex].height) / 3
 					self.terrain[ny][nx].height = n + r
 				#east
 				if self.terrain[ey][ex].height is None:
-					if ex == (self.width - 1) and self.terrain[ey][0].height is not None and wrap is True:
+					if ex == (self.length - 1) and self.terrain[ey][0].height is not None and wrap is True:
 						e = self.terrain[ey][0].height
 					else:
 						e = (self.terrain[cy][cx].height + self.terrain[ney][nex].height + self.terrain[sey][sex].height) / 3
 					self.terrain[ey][ex].height = e + r
 				#south
 				if self.terrain[sy][sx].height is None:
-					if sex == (self.width - 1) and self.terrain[sey][0].height is not None and wrap is True:
+					if sex == (self.length - 1) and self.terrain[sey][0].height is not None and wrap is True:
 						s = (self.terrain[cy][cx].height + self.terrain[sey][0].height + self.terrain[swy][swx].height) / 3
 					else:
 						s = (self.terrain[cy][cx].height + self.terrain[sey][sex].height + self.terrain[swy][swx].height) / 3

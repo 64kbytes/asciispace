@@ -80,7 +80,9 @@ def render_UI(snapshot):
 		if obj.x == x and obj.y == y and True]
 	names = ', '.join(names)
 	
-	coord = str(snapshot['region'].terrain[y][x].x) + ':' + str(snapshot['region'].terrain[y][x].y)
+	if x < snapshot['region'].length and y < snapshot['region'].length:	
+		coord = str(snapshot['region'].terrain[y][x].x) + ':' + str(snapshot['region'].terrain[y][x].y)
+	else: coord = '-'
 	
 	ltc.console_set_default_background(UI, ltc.white)
 	ltc.console_set_default_foreground(UI, ltc.black)
@@ -116,17 +118,20 @@ def render(VP, snapshot):
 	#explored
 	for y in range(config.SCREEN_HEIGHT):
 		vy = y + ovy
-		if (vy > region.height - 1) or vy < 0:
+		if (vy > region.length - 1) or vy < 0:
 			break
 		for x in range(config.SCREEN_WIDTH):
 			vx = x + ovx
-			if (vx > region.width - 1) or vx < 0:
+			if (vx > region.length - 1) or vx < 0:
 				break
 						
 			h = int(terrain[vy][vx].height)
 							
 			ltc.console_set_char_background(CON, x, y, ltc.Color(0, h, 0), ltc.BKGND_SET)
 			
+			if h < 0:
+				ltc.console_set_default_foreground(CON, ltc.cyan)
+				ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
 			"""
 			if terrain[vy][vx].explored:
 				if terrain[vy][vx].block_sight:
