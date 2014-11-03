@@ -12,7 +12,7 @@ EXPLORED_GROUND = ltc.darkest_grey * .5
 LIGHT_WALL = ltc.Color(130, 110, 50)
 LIGHT_GROUND = ltc.Color(200, 180, 50)
 
-VWP		= None
+
 CON		= None
 UI		= None
 MOUSE	= None
@@ -25,6 +25,19 @@ KEYBOARD_MAP = {
 	'LEFT':			ltc.KEY_LEFT,
 	'RIGHT':		ltc.KEY_RIGHT
 }
+
+idx = [ 0, 10, 50, 100, 255 ] # indexes of the keys
+col = [ 
+		ltc.Color( 255, 255, 153 ), 
+		ltc.Color( 102, 204, 0 ),
+		ltc.Color( 153, 76, 0 ), 
+		ltc.Color( 102, 51, 0 ),  
+		ltc.Color(255,255,255) ] # colors : black, red, white
+land_colors = ltc.color_gen_map(col, idx)
+
+idx = [ 0, 255 ] # indexes of the keys
+col = [ ltc.Color( 153, 255, 255 ), ltc.Color( 0, 25, 51 ) ] # colors : black, red, white
+sea_colors = ltc.color_gen_map(col, idx)
 
 def init():
 	global SYMBOL_MAP, KEYBOARD_MAP, CON, UI, MOUSE, KEY
@@ -70,27 +83,40 @@ def clear(snapshot):
 		ltc.console_set_char_background(CON, cha.x, cha.y, ltc.BKGND_NONE, ltc.BKGND_SET)
 		ltc.console_put_char(CON, cha.x, cha.y, ' ', ltc.BKGND_NONE)
 
-def render_UI(snapshot):
+def render_UI(VP, snapshot):
 
 	ltc.console_clear(UI)
 	
 	#return a string with the names of all objects under the MOUSE
 	(x, y) = (MOUSE.cx, MOUSE.cy)
-	names = [obj.name for obj in snapshot['cast']
-		if obj.x == x and obj.y == y and True]
+	
+	lx, ly = VP.screen_to_map(x, y)
+	
+	assert lx >= 0 and ly >= 0
+	
+	names = [obj.name + " | G({0}:{1}) | L({2}:{3})".format(obj.gx, obj.gy, obj.x, obj.y) for obj in snapshot['cast']
+		if obj.x == lx and obj.y == ly and True]
+		
 	names = ', '.join(names)
 	
-	if x < snapshot['region'].length and y < snapshot['region'].length:	
-		coord = str(snapshot['region'].terrain[y][x].x) + ':' + str(snapshot['region'].terrain[y][x].y)
-	else: coord = '-'
+	if lx < snapshot['region'].length and ly < snapshot['region'].length:
+		tile = snapshot['region'].get_tile(lx, ly).get_info()
+			
+		tgx, tgy = tile['xy_global']
+		tlx, tly = tile['xy_local']
+		
+		info = "G({0}:{1}) | L({2}:{3}) | Z: {4}".format(tgx, tgy, tlx, tly, int(tile['altitude']))		
+
+	else: info = '-'
 	
 	ltc.console_set_default_background(UI, ltc.white)
 	ltc.console_set_default_foreground(UI, ltc.black)
-	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, coord + ' ' + names)
+	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, info + ' | ' + names)
 	
 	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 1, 0, 0, 0, 1, .5)
 
 def render(VP, snapshot):
+	global land_colors, sea_colors
 
 	region	= snapshot['region']
 	ego		= snapshot['ego']
@@ -112,32 +138,37 @@ def render(VP, snapshot):
 	oy = ego.y - radius
 	
 	#viewport origin
-	ovx = VP.x
-	ovy = VP.y
+	ofx, ofy = VP.get_screen_offset()
+	ovx, ovy = VP.get_map_offset()	
+	#maxh = 0
+	#minh = 0
 	
 	#explored
-	for y in range(config.SCREEN_HEIGHT):
-		vy = y + ovy
-		if (vy > region.length - 1) or vy < 0:
-			break
-		for x in range(config.SCREEN_WIDTH):
-			vx = x + ovx
-			if (vx > region.length - 1) or vx < 0:
-				break
+	for y in range(VP.height):	
+		vy = y		
+		for x in range(VP.width):
+			vx = x 
 						
-			h = int(terrain[vy][vx].height)
-							
-			ltc.console_set_char_background(CON, x, y, ltc.Color(0, h, 0), ltc.BKGND_SET)
+			h = int(terrain[vy][vx].z)
 			
+			#if h > maxh: maxh = h
+			#if h < minh: minh = h
+		
 			if h < 0:
-				ltc.console_set_default_foreground(CON, ltc.cyan)
-				ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, sea_colors[-h], ltc.BKGND_SET)
+				#ltc.console_set_char_background(CON, x, y, ltc.red, ltc.BKGND_SET)
+				#ltc.console_set_default_foreground(CON, ltc.cyan)
+				#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
+			else:
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, land_colors[h], ltc.BKGND_SET)
+				
 			"""
 			if terrain[vy][vx].explored:
 				if terrain[vy][vx].block_sight:
 					ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
 				else:
 					ltc.console_set_char_background(CON, x, y, EXPLORED_GROUND, ltc.BKGND_SET)
+			
 			
 			# in FOV area
 			if (ox < vx < ox + (radius * 2)) and (oy < vy < oy + (radius * 2)):
@@ -149,17 +180,21 @@ def render(VP, snapshot):
 					else:
 						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * fov[vy - oy][vx - ox], ltc.BKGND_SET )
 			"""
+			
+	#print minh, maxh
 	
 	#render characters
 	for cha in cast:
+		chax,chay = snapshot['region'].xy_global_to_local((cha.x, cha.y))
+		chax,chay = VP.map_to_viewport(chax, chay) 
 		symbol = sym.get_symbol(cha)
 		ltc.console_set_default_foreground(CON, symbol.front_color)
-		ltc.console_set_char_background(CON, cha.x - ovx, cha.y - ovy, symbol.back_color, ltc.BKGND_SET )
-		ltc.console_put_char(CON, cha.x - ovx, cha.y - ovy, symbol.char, ltc.BKGND_SET)
+		ltc.console_set_char_background(CON, chax + ofx, chay + ofy, symbol.back_color, ltc.BKGND_SET )
+		ltc.console_put_char(CON, chax + ofx, chay + ofy, symbol.char, ltc.BKGND_SET)
 			
-	ltc.console_blit(CON, 0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT, 0, 0, 0)
+	ltc.console_blit(CON, 0, 0, ofx + VP.width, ofy + VP.height, 0, 0, 0)
 	
-	render_UI(snapshot)
+	render_UI(VP, snapshot)
 	
 	ltc.console_flush()
 

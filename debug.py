@@ -1,4 +1,6 @@
 import os
+import pprint
+
 _proc_status = '/proc/%d/status' % os.getpid()
 
 _scale = {'kB': 1024.0, 'mB': 1024.0*1024.0,
@@ -40,3 +42,7 @@ def stacksize(since=0.0):
     '''Return stack size in bytes.
     '''
     return _VmB('VmStk:') - since
+    
+def dump():
+    pprint.pprint(globals())
+    pprint.pprint(locals())
