@@ -2,17 +2,16 @@ import config
 import libtcodpy as ltc
 import symbols as sym
 import math
+from algorithms.fov import *
 
-#DARK_WALL = ltc.Color(0, 0, 100)
-#DARK_GROUND = ltc.Color(50, 50, 150)
-
-DARK_WALL = ltc.black
+DARK_WALL = ltc.grey
 DARK_GROUND = ltc.black
 EXPLORED_WALL = ltc.black
 EXPLORED_GROUND = ltc.darkest_grey * .5
 
 LIGHT_WALL = ltc.Color(130, 110, 50)
 LIGHT_GROUND = ltc.Color(200, 180, 50)
+
 
 CON		= None
 UI		= None
@@ -27,21 +26,29 @@ KEYBOARD_MAP = {
 	'RIGHT':		ltc.KEY_RIGHT
 }
 
-FOV_MAP = None
-FOV_ALGO = 0  #default FOV algorithm
-FOV_LIGHT_WALLS = True
-TORCH_RADIUS = 10
-LIGHT_RADIUS = 5
+idx = [ 0, 10, 50, 100, 255 ] # indexes of the keys
+col = [ 
+		ltc.Color( 255, 255, 153 ), 
+		ltc.Color( 102, 204, 0 ),
+		ltc.Color( 153, 76, 0 ), 
+		ltc.Color( 102, 51, 0 ),  
+		ltc.Color(255,255,255) ] # colors : black, red, white
+land_colors = ltc.color_gen_map(col, idx)
+
+idx = [ 0, 255 ] # indexes of the keys
+col = [ ltc.Color( 153, 255, 255 ), ltc.Color( 0, 25, 51 ) ] # colors : black, red, white
+sea_colors = ltc.color_gen_map(col, idx)
 
 def init():
 	global SYMBOL_MAP, KEYBOARD_MAP, CON, UI, MOUSE, KEY
-	
 	w = config.SCREEN_WIDTH
 	h = config.SCREEN_HEIGHT
 	ltc.sys_set_fps(config.FPS)
-	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_ASCII_INROW | ltc.FONT_TYPE_GREYSCALE, 16, 16)
-	ltc.console_init_root(w, h, config.TITLE, False)
 	
+	#ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_ASCII_INROW | ltc.FONT_TYPE_GREYSCALE, 16, 16)
+	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_TCOD | ltc.FONT_TYPE_GREYSCALE, 32, 8)
+	
+	ltc.console_init_root(w, h, config.TITLE, False)
 	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
 	CON = ltc.console_new(w, h)
 	UI = ltc.console_new(w, 10)
@@ -69,121 +76,150 @@ def get_keyboard():
 			return v
 
 def get_mouse():
-	(x, y) = (MOUSE.cx, MOUSE.cy)
-	return (x, y)
+	return MOUSE
 
 def clear(snapshot):
 	for cha in snapshot['cast']:
 		ltc.console_set_char_background(CON, cha.x, cha.y, ltc.BKGND_NONE, ltc.BKGND_SET)
 		ltc.console_put_char(CON, cha.x, cha.y, ' ', ltc.BKGND_NONE)
 
-def render_UI(snapshot):
+def render_UI(VP, snapshot):
 
 	ltc.console_clear(UI)
 	
 	#return a string with the names of all objects under the MOUSE
 	(x, y) = (MOUSE.cx, MOUSE.cy)
-	names = [obj.name for obj in snapshot['cast']
-		if obj.x == x and obj.y == y and True]
-	names = ', '.join(names)
+	
+	lx, ly = VP.screen_to_map(x, y)
+		
+	if lx < 0 or ly < 0:
+		return
+	
+	names = [obj.name + " | G({0}:{1}) | L({2}:{3})".format(obj.gx, obj.gy, obj.x, obj.y) for obj in snapshot['cast']
+		if obj.x == lx and obj.y == ly and True]
+		
+	names = ' | ' + ', '.join(names)
+		
+	if lx < snapshot['region'].length and ly < snapshot['region'].length:
+	
+		tile = snapshot['region'].get_tile(lx, ly).get_info()
+		tgx, tgy = tile['xy_global']
+		tlx, tly = tile['xy_local']
+		
+		"""	
+		if len(tile['entities']) > 0:
+			entities = [obj.name + " | G({0}:{1}) | L({2}:{3})".format(obj.gx, obj.gy, obj.x, obj.y) for obj in tile['entities']]
+			entities = ' | ' + ', '.join(entities)
+		else:
+			entities = ''		
+		"""
+		
+		info = "G({0}:{1}) | L({2}:{3}) | Z: {4}".format(tgx, tgy, tlx, tly, int(tile['altitude'])) + names		
+		
+
+	else: info = '-'
 	
 	ltc.console_set_default_background(UI, ltc.white)
 	ltc.console_set_default_foreground(UI, ltc.black)
-	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, names)
+	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, info)
 	
 	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 1, 0, 0, 0, 1, .5)
 
-FLAG = False
-LIGHT_MAPS = []
+def render(VP, snapshot):
+	global land_colors, sea_colors
 
-def render(snapshot):
-	global FLAG #TODO: get ride of this thing!	
-	global LIGHT_MAPS
-	world = snapshot['world']
+	region	= snapshot['region']
+	ego		= snapshot['ego']
+	cast	= snapshot['cast']
+	terrain	= region.get_terrain()
+	fov		= region.get_fov()
 	
 	ltc.console_clear(CON)
 	
-	if not FLAG:
-		for light in snapshot['lights']:
-			lmap = ltc.map_new(config.MAP_HEIGHT, config.MAP_WIDTH)
-
-			for y in range(config.MAP_HEIGHT):
-				for x in range(config.MAP_WIDTH):
-					ltc.map_set_properties(lmap, x, y, not world[x][y].block_sight, not world[x][y].blocked)
-					
-			ltc.map_compute_fov(lmap, light[0], light[1], LIGHT_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)		
-			LIGHT_MAPS.append(lmap)
-		FLAG = True
+	radius = 20
 	
 	#recompute FOV if needed (the player moved or something)
-	if not snapshot['ego'].is_updated:		
-		ltc.map_compute_fov(FOV_MAP, snapshot['ego'].x, snapshot['ego'].y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
-		snapshot['ego'].is_updated = True
+	if not ego.is_updated or fov is None:
+		fov = region.update_fov(ego.x, ego.y, radius)
+		ego.is_updated = True
 	
-	#go through all tiles, and set their background color according to the FOV
-	for y in range(config.MAP_HEIGHT):
-		for x in range(config.MAP_WIDTH):
-			visible = ltc.map_is_in_fov(FOV_MAP, x, y)
-			for lmap in LIGHT_MAPS:
-				lighted = False
-				if ltc.map_is_in_fov(lmap, x, y):
-					lighted = True
-					break
-			
-			wall = world[x][y].block_sight
-			explored = world[x][y].explored
-			if not visible:
-				#it's out of the player's FOV
-				if wall:
-					if explored:
-						ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
-					else:
-						ltc.console_set_char_background(CON, x, y, DARK_WALL, ltc.BKGND_SET)
-				else:
-					if explored:
-						ltc.console_set_char_background(CON, x, y, EXPLORED_GROUND, ltc.BKGND_SET)
-					else:
-						ltc.console_set_char_background(CON, x, y, DARK_GROUND, ltc.BKGND_SET)
-			else:
-			#it's visible
-				world[x][y].explored = True
-				if wall:
-					if lighted:
-						ltc.console_set_char_background(CON, x, y, LIGHT_WALL, ltc.BKGND_SET )
-					else:
-						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * .5, ltc.BKGND_SET )
-				else:
-					if lighted:
-						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND, ltc.BKGND_SET )
-					else:
-						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * .5, ltc.BKGND_SET )
+	#ego fov origin	
+	ox = ego.x - radius
+	oy = ego.y - radius
+	
+	#viewport origin
+	ofx, ofy = VP.get_screen_offset()
+	ovx, ovy = VP.get_map_offset()	
 		
-	#render characters
-	for cha in snapshot['cast']:
+	#maxh = 0
+	#minh = 0
+	
+	#explored
+	for y in range(VP.height):	
+		vy = y + ovy		
+		for x in range(VP.width):
+			vx = x + ovx
+						
+			h = int(terrain[vy][vx].z)
+			
+			#if h > maxh: maxh = h
+			#if h < minh: minh = h
+		
+			if h < 0:
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, sea_colors[-h], ltc.BKGND_SET)
+				#ltc.console_set_char_background(CON, x, y, ltc.red, ltc.BKGND_SET)
+				#ltc.console_set_default_foreground(CON, ltc.cyan)
+				#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
+			else:
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, land_colors[h], ltc.BKGND_SET)
+			
+			"""	
+			for entity in terrain[vy][vx].entities:
+				symbol = sym.get_symbol(entity)
+				ltc.console_set_default_foreground(CON, symbol.front_color)
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, symbol.back_color, ltc.BKGND_SET )
+				ltc.console_put_char(CON,  ofx + x, ofy + y, symbol.char, ltc.BKGND_SET)
+			
+			if terrain[vy][vx].explored:
+				if terrain[vy][vx].block_sight:
+					ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
+				else:
+					ltc.console_set_char_background(CON, x, y, EXPLORED_GROUND, ltc.BKGND_SET)
+			
+			
+			# in FOV area
+			if (ox < vx < ox + (radius * 2)) and (oy < vy < oy + (radius * 2)):
+				# in FOV
+				if fov[vy - oy][vx - ox] > 0:
+					terrain[vy][vx].explored = True
+					if terrain[vy][vx].block_sight:
+						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * fov[vy - oy][vx - ox], ltc.BKGND_SET )
+					else:
+						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * fov[vy - oy][vx - ox], ltc.BKGND_SET )
+			"""
+			
+	#print minh, maxh
+
+	#render entities
+	for cha in cast:
+		chax,chay = snapshot['region'].xy_global_to_local((cha.gx, cha.gy))
+		
 		symbol = sym.get_symbol(cha)
 		ltc.console_set_default_foreground(CON, symbol.front_color)
-		ltc.console_set_char_background(CON, cha.x, cha.y, symbol.back_color, ltc.BKGND_SET )
-		ltc.console_put_char(CON, cha.x, cha.y, symbol.char, ltc.BKGND_SET)
-			
-	ltc.console_blit(CON, 0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT, 0, 0, 0)
+		
+		ltc.console_set_char_background(CON, chax + ofx - ovx, chay + ofy - ovy, symbol.back_color, ltc.BKGND_SET )
+		
+		ltc.console_put_char(CON, chax + ofx - ovx, chay + ofy - ovy, symbol.char, ltc.BKGND_SET)
 	
-	render_UI(snapshot)
+			
+	ltc.console_blit(CON, 0, 0, ofx + VP.width, ofy + VP.height, 0, 0, 0)
+	
+	render_UI(VP, snapshot)
 	
 	ltc.console_flush()
-	
-	
 
-def set_fov_map(world):
-	global FOV_MAP
-	FOV_MAP = ltc.map_new(config.MAP_WIDTH, config.MAP_HEIGHT)
-	for y in range(config.MAP_HEIGHT):
-		for x in range(config.MAP_WIDTH):
-		    ltc.map_set_properties(FOV_MAP, x, y, not world[x][y].block_sight, not world[x][y].blocked)
-		    
-def set_light_map(world):
-	pass
 	
 def cleanup():
 	global CON
 	ltc.console_clear(CON)
-	 
+		
