@@ -14,18 +14,26 @@ class Tile:
 		self.x = lx
 		self.y = ly
 		self.z = None
-		
 		self.gx = gx
 		self.gy = gy
 	
 		self.blocked = blocked
 		self.explored = explored
+		self.entities = []
+		
 		#by default, if a tile is blocked, it also blocks sight
 		if block_sight is None: block_sight = blocked
 		self.block_sight = block_sight
+		
+	def hold(self, entity):
+		entity.set_context(self)
+		self.entities.append(entity)
+		
+	def release(self, entity):
+		self.entities.remove(entity)
 	
-	def get_xy_local(self):
-		return (self.x, self.y)
+	def get_xyz_local(self):
+		return (self.x, self.y, self.z)
 		
 	def get_xy_global(self):
 		return (self.gx, self.gy)
@@ -37,7 +45,8 @@ class Tile:
 			'altitude':		self.z,
 			'block_sight':	self.block_sight,
 			'block_move':	self.blocked,
-			'explored':		self.explored
+			'explored':		self.explored,
+			'entities':		self.entities
 		}
 	
 	def copy(self, tile):
@@ -46,6 +55,7 @@ class Tile:
 		tile.blocked = self.blocked
 		tile.block_sight = self.block_sight
 		tile.explored = self.explored
+		tile.entities = self.entities
 		tile.z = self.z
 		return tile
 
@@ -68,7 +78,8 @@ class Region(object):
 		self.bounds = None
 		
 		#set planet seed. Needs to be stored later
-		self.seed = random.random()
+		#self.seed = random.random()
+		self.seed = 473
 		
 		#parameters for dungeon generator
 		self.room_max_size = 10
@@ -92,11 +103,13 @@ class Region(object):
 		
 	def xy_global_to_local(self, gxy):
 		gx, gy = gxy
-		return (gx - self.bounds['W'][0], gy - self.bounds['N'][1])
+		u = self.get_map_scale_unit()		
+		return (int(math.floor((gx - self.bounds['W'][0]) / u)), int(math.floor((gy - self.bounds['N'][1]) / u)))
 		
 	def xy_local_to_global(self, lxy):
 		lx, ly, lz = lxy
-		return (lx + self.bounds['W'][0], ly + self.bounds['N'][1])
+		u = self.get_map_scale_unit()
+		return (lx + self.bounds['W'][0] * u, ly + self.bounds['N'][1] * u)
 		
 	def get_map_scale_unit(self):
 		return int(math.pow(2, Region.max_zoom - self.zoom))
@@ -298,8 +311,6 @@ class Region(object):
 		# fill empty tiles on wide map
 		self.create_terrain(False, 0, 128 * (2 / self.zoom), 0.8)
 		
-		
-		
 		# update region global bounds
 		self.set_bounds()
 	
@@ -310,7 +321,9 @@ class Region(object):
 		if self.zoom == 0:
 			return False
 		else:
-			self.zoom -= 1
 			self.terrain = self.cache[self.zoom]
+			self.zoom -= 1
+			# update region global bounds
+			self.set_bounds()
 			return True
 

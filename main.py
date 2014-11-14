@@ -14,14 +14,9 @@ else:
 VP = None
 
 class Viewport(object):
-	def __init__(self, scene, x = 0, y = 0):
-		self.scene		= scene
+	def __init__(self, x = 0, y = 0):
 		self.width		= config.VIEWPORT_WIDTH
-		self.height		= config.VIEWPORT_HEIGHT
-		
-		#self.scr_width	= config.SCREEN_WIDTH
-		#self.scr_height	= config.SCREEN_HEIGHT
-		
+		self.height		= config.VIEWPORT_HEIGHT		
 		self.map_size	= config.MAP_SIZE
 		self.x			= x
 		self.y			= y
@@ -29,36 +24,31 @@ class Viewport(object):
 		self.offset_y	= 0
 		#keep track of viewport xy beetween zoom in/out
 		self.zoom		= 0
-		self.stack		= [None for i in range(self.scene.max_zoom)]
+		self.stack		= [None for i in range(config.MAX_ZOOM)]
 		
 	def get_screen_offset(self):
-		return (self.x + self.offset_x, self.y + self.offset_y)
+		return (self.x, self.y)
 		
 	def get_map_offset(self):
 		return (self.offset_x, self.offset_y)
 		
 	def screen_to_map(self, x, y):
-		ofx, ofy = self.get_screen_offset()
-		if x - ofx < 0: 
-			mx = 0 
-		else:
-			mx = x - ofx
-		if y - ofy < 0: 
-			my = 0 
-		else: 
-			my = y - ofx 
-		return (mx, my)
+		vx, vy = self.get_screen_offset()
+		mx, my = self.get_map_offset()			
+		return (x + mx - vx, y + my - vy)
 		
 	def screen_to_viewport(self, x, y):
 		return (self.x - x, self.y - y)
 		
+	def viewport_to_screen(self, x, y):
+		return (self.x + x, self.y + y)
+		
 	def map_to_viewport(self, x, y):
-		ofx, ofy = self.get_map_offset()
-		return (x - ofx, y - ofy)
+		mx, my = self.get_map_offset()
+		return (x + mx, y + my)
 		
 	def move_to(self, x, y):
-		x,y = self.map_to_viewport(x, y)
-	
+		
 		if x < 0:
 			x = self.x
 		elif (x + self.width) > self.map_size - 1:
@@ -72,55 +62,61 @@ class Viewport(object):
 		self.offset_x = x
 		self.offset_y = y
 		
-	def move(self, x, y, z):
-		x,y = self.map_to_viewport(x, y)
-		self.move_to(self.offset_x + x, self.offset_y + y)
+	def move(self, dx, dy, z):		
+		
+		self.move_to(self.offset_x + dx, self.offset_y + dy)
+		
+		#x,y = self.map_to_viewport(x, y)
+		#self.move_to(x, y)
 		return True
 		
 	def center_on_map(self):
-		self.offset_x = (self.map_size / 2) - self.width / 2
-		self.offset_y = (self.map_size / 2) - self.height / 2
+		self.offset_x = (self.map_size - self.width) / 2
+		self.offset_y = (self.map_size - self.height) / 2
 		
 	def center_at(self, x, y):
-		x,y = self.map_to_viewport(x, y)
+		
 		cx = x - int(self.width / 2)
 		cy = y - int(self.height / 2)
+		
+		
 				
 		self.move_to(cx, cy)
 		
-	def is_at_edge(self, x, y):
-	
+	def is_at_viewport_edge(self, x, y):
 		at_edge = dict.fromkeys(('N','E','S','W'), False)
-		if y == 0: 
-			at_edge['N'] = True
-		if x == self.width: 
-			at_edge['E'] = True
-		if y == self.height:
-			at_edge['S'] = True
-		if x == 0:
-			at_edge['W'] = True
+		at_edge['N'] = (y - self.offset_y) == 0
+		at_edge['E'] = (x - self.offset_x) == self.width - 1
+		at_edge['S'] = (y - self.offset_y) == self.height - 1
+		at_edge['W'] = (x - self.offset_x) == 0
 		return at_edge
 		
 	#def is_at_screen_edge(self, x, y):
 	#	return self.is_at_edge(x - self.offset_x - 1, y - self.offset_y - 1, self.width, self.height)
 		
 	def is_leaving(self, x, y, boundary = 10):
-		px,py = self.map_to_viewport(x, y)
 	
-		leaving_x = ((px > (self.width - boundary)) and (self.offset_x < self.width - 1)) or ((px < boundary) and self.offset_x > 0)
-		leaving_y = ((py > (self.height - boundary)) and (self.offset_y < self.height - 1)) or ((py < boundary) and self.offset_y > 0)
-						
-		return (leaving_x, leaving_y)
+		leaving = dict.fromkeys(('N','E','S','W'), False)
+		
+		leaving['N'] = ((y - self.offset_y) < boundary) and self.offset_y > 0
+		leaving['E'] = ((x - self.offset_x) > (self.width - boundary - 1)) and (self.offset_x < (self.map_size - self.width))
+		leaving['S'] = ((y - self.offset_y) > (self.height - boundary - 1)) and (self.offset_y < (self.map_size - self.height))
+		leaving['W'] = ((x - self.offset_x) < boundary) and self.offset_x > 0
+
+		return leaving
 		
 	def zoom_in(self, pos, f):
-		if self.scene.zoom_in((pos[0] + self.offset_x, pos[1] + self.offset_y), f):
+		pos = self.screen_to_map(pos[0], pos[1])
+
+		if GM.zoom_in(pos, f):
 			#store current viewport xy
 			self.stack[self.zoom] = (self.offset_x, self.offset_y)
 			self.zoom += 1
-			self.center_on_map()
+			
+			self.center_at(pos[0], pos[1])
 					
 	def zoom_out(self):
-		if self.scene.zoom_out():
+		if GM.zoom_out():
 			self.zoom -= 1
 			#restore previous viewport xy
 			self.offset_x, self.offset_y = (self.stack[self.zoom][0], self.stack[self.zoom][1])
@@ -135,10 +131,11 @@ def init():
 	GM.init()
 	G.init()
 	
-	VP = Viewport(GM.get_region(), 10, 10)
+	VP = Viewport(5, 10)
 	#VP.center_at(GM.EGO.x, GM.EGO.y)
 	#VP.move_to(0, 0)
-	VP.center_on_map()
+	#VP.center_on_map()
+	VP.move_to(0, 0)
 	
 	G.intro()
 	G.options()
@@ -173,16 +170,15 @@ def handle_user_input(ui):
 	if xyz != (0,0,0):
 		if GM.move_ego(xyz):
 			GM.EGO.is_updated = False
-			
-			if VP.is_at_edge(GM.EGO.x, GM.EGO.y):
-				return
-			
-			leaving_x, leaving_y = VP.is_leaving(GM.EGO.x, GM.EGO.y)					
-			dx = xyz[0] if leaving_x else 0
-			dy = xyz[1] if leaving_y else 0
+								
+			leaving = VP.is_leaving(GM.EGO.x, GM.EGO.y)
+								
+			dx = xyz[0] if ((leaving['E'] and xyz[0] > 0) or (leaving['W'] and xyz[0] < 0)) else 0
+			dy = xyz[1] if ((leaving['N'] and xyz[1] < 0) or (leaving['S'] and xyz[1] > 0)) else 0
 			dz = xyz[2]
 			
 			VP.move(dx, dy, dz)
+		
 	
 snapshot = None
 

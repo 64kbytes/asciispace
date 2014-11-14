@@ -91,27 +91,37 @@ def render_UI(VP, snapshot):
 	(x, y) = (MOUSE.cx, MOUSE.cy)
 	
 	lx, ly = VP.screen_to_map(x, y)
-	
-	assert lx >= 0 and ly >= 0
+		
+	if lx < 0 or ly < 0:
+		return
 	
 	names = [obj.name + " | G({0}:{1}) | L({2}:{3})".format(obj.gx, obj.gy, obj.x, obj.y) for obj in snapshot['cast']
 		if obj.x == lx and obj.y == ly and True]
 		
-	names = ', '.join(names)
-	
+	names = ' | ' + ', '.join(names)
+		
 	if lx < snapshot['region'].length and ly < snapshot['region'].length:
+	
 		tile = snapshot['region'].get_tile(lx, ly).get_info()
-			
 		tgx, tgy = tile['xy_global']
 		tlx, tly = tile['xy_local']
 		
-		info = "G({0}:{1}) | L({2}:{3}) | Z: {4}".format(tgx, tgy, tlx, tly, int(tile['altitude']))		
+		"""	
+		if len(tile['entities']) > 0:
+			entities = [obj.name + " | G({0}:{1}) | L({2}:{3})".format(obj.gx, obj.gy, obj.x, obj.y) for obj in tile['entities']]
+			entities = ' | ' + ', '.join(entities)
+		else:
+			entities = ''		
+		"""
+		
+		info = "G({0}:{1}) | L({2}:{3}) | Z: {4}".format(tgx, tgy, tlx, tly, int(tile['altitude'])) + names		
+		
 
 	else: info = '-'
 	
 	ltc.console_set_default_background(UI, ltc.white)
 	ltc.console_set_default_foreground(UI, ltc.black)
-	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, info + ' | ' + names)
+	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, info)
 	
 	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 1, 0, 0, 0, 1, .5)
 
@@ -140,14 +150,15 @@ def render(VP, snapshot):
 	#viewport origin
 	ofx, ofy = VP.get_screen_offset()
 	ovx, ovy = VP.get_map_offset()	
+		
 	#maxh = 0
 	#minh = 0
 	
 	#explored
 	for y in range(VP.height):	
-		vy = y		
+		vy = y + ovy		
 		for x in range(VP.width):
-			vx = x 
+			vx = x + ovx
 						
 			h = int(terrain[vy][vx].z)
 			
@@ -161,8 +172,14 @@ def render(VP, snapshot):
 				#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
 			else:
 				ltc.console_set_char_background(CON, ofx + x, ofy + y, land_colors[h], ltc.BKGND_SET)
-				
-			"""
+			
+			"""	
+			for entity in terrain[vy][vx].entities:
+				symbol = sym.get_symbol(entity)
+				ltc.console_set_default_foreground(CON, symbol.front_color)
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, symbol.back_color, ltc.BKGND_SET )
+				ltc.console_put_char(CON,  ofx + x, ofy + y, symbol.char, ltc.BKGND_SET)
+			
 			if terrain[vy][vx].explored:
 				if terrain[vy][vx].block_sight:
 					ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
@@ -182,15 +199,18 @@ def render(VP, snapshot):
 			"""
 			
 	#print minh, maxh
-	
-	#render characters
+
+	#render entities
 	for cha in cast:
-		chax,chay = snapshot['region'].xy_global_to_local((cha.x, cha.y))
-		chax,chay = VP.map_to_viewport(chax, chay) 
+		chax,chay = snapshot['region'].xy_global_to_local((cha.gx, cha.gy))
+		
 		symbol = sym.get_symbol(cha)
 		ltc.console_set_default_foreground(CON, symbol.front_color)
-		ltc.console_set_char_background(CON, chax + ofx, chay + ofy, symbol.back_color, ltc.BKGND_SET )
-		ltc.console_put_char(CON, chax + ofx, chay + ofy, symbol.char, ltc.BKGND_SET)
+		
+		ltc.console_set_char_background(CON, chax + ofx - ovx, chay + ofy - ovy, symbol.back_color, ltc.BKGND_SET )
+		
+		ltc.console_put_char(CON, chax + ofx - ovx, chay + ofy - ovy, symbol.char, ltc.BKGND_SET)
+	
 			
 	ltc.console_blit(CON, 0, 0, ofx + VP.width, ofy + VP.height, 0, 0, 0)
 	
