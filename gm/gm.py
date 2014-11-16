@@ -82,6 +82,7 @@ def move_ego(xyz):
 		tile = REGION.terrain[ny][nx]
 		if not tile.blocked:
 			EGO.move(xyz, u)
+			EGO.z = int(tile.z)
 			return True
 	return False
 	

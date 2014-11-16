@@ -79,7 +79,7 @@ class Region(object):
 		
 		#set planet seed. Needs to be stored later
 		#self.seed = random.random()
-		self.seed = 473
+		self.seed = 123
 		
 		#parameters for dungeon generator
 		self.room_max_size = 10
@@ -285,8 +285,8 @@ class Region(object):
 		# keep zoom area inside defined map
 		if x0 < 0: x0 = 0
 		if y0 < 0: y0 = 0
-		if (x0 + l) > (self.length - 1): x0 = (self.length - 1) - l
-		if (y0 + l) > (self.length - 1): y0 = (self.length - 1) - l
+		if (x0 + l) > (self.length): x0 = (self.length - 1) - l
+		if (y0 + l) > (self.length): y0 = (self.length - 1) - l
 			
 		# feed new empty region with global coordinates origin
 		origin_tile = self.get_tile(x0, y0)
