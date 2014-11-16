@@ -83,6 +83,43 @@ def clear(snapshot):
 		ltc.console_set_char_background(CON, cha.x, cha.y, ltc.BKGND_NONE, ltc.BKGND_SET)
 		ltc.console_put_char(CON, cha.x, cha.y, ' ', ltc.BKGND_NONE)
 
+def handle_user_input(ui, VP, GM):
+	
+	#mouse
+	m = get_mouse()
+	
+	if m.lbutton_pressed:
+		pos = (m.cx, m.cy)
+		VP.zoom_in(pos, 2)
+		
+	if m.rbutton_pressed:
+		VP.zoom_out()
+		
+	
+	if ui is None: 
+		GM.EGO.is_updated = True if GM.EGO.is_updated is not None else False
+		return False
+	
+	if ui == 'ESCAPE':	exit()
+
+	xyz = (0,0,0)	
+	if ui == 'UP':		xyz = (0, -1, 0)
+	elif ui == 'DOWN':	xyz = (0, 1, 0)
+	elif ui == 'LEFT':	xyz = (-1, 0, 0)
+	elif ui == 'RIGHT':	xyz = (1, 0, 0)
+		
+	if xyz != (0,0,0):
+		if GM.move_ego(xyz):
+			GM.EGO.is_updated = False
+								
+			leaving = VP.is_leaving(GM.EGO.x, GM.EGO.y)
+								
+			dx = xyz[0] if ((leaving['E'] and xyz[0] > 0) or (leaving['W'] and xyz[0] < 0)) else 0
+			dy = xyz[1] if ((leaving['N'] and xyz[1] < 0) or (leaving['S'] and xyz[1] > 0)) else 0
+			dz = xyz[2]
+			
+			VP.move(dx, dy, dz)
+
 def render_UI(VP, snapshot):
 
 	ltc.console_clear(UI)
@@ -161,17 +198,29 @@ def render(VP, snapshot):
 			vx = x + ovx
 						
 			h = int(terrain[vy][vx].z)
+			haze = 1;
+			rgb_land = land_colors[h]
+			rgb_sea = sea_colors[-h]
+			
+			"""
+			if h > ego.z > 0:
+				continue
+			if h < ego.z:
+				haze = .9
+			"""
+			
+			
 			
 			#if h > maxh: maxh = h
 			#if h < minh: minh = h
 		
 			if h < 0:
-				ltc.console_set_char_background(CON, ofx + x, ofy + y, sea_colors[-h], ltc.BKGND_SET)
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_sea, ltc.BKGND_SET)
 				#ltc.console_set_char_background(CON, x, y, ltc.red, ltc.BKGND_SET)
 				#ltc.console_set_default_foreground(CON, ltc.cyan)
 				#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
 			else:
-				ltc.console_set_char_background(CON, ofx + x, ofy + y, land_colors[h], ltc.BKGND_SET)
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_land * haze, ltc.BKGND_SET)
 			
 			"""	
 			for entity in terrain[vy][vx].entities:

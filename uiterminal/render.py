@@ -31,6 +31,9 @@ def options():
 def clear(snapshot = None):
 	sys.stderr.write("\x1b[2J\x1b[H")
 	
+def handle_user_input(ui, VP, GM):
+	pass
+	
 def get_keyboard():
    #Returns a single character from standard input
    fd = sys.stdin.fileno()
@@ -73,11 +76,11 @@ def render(VP, snapshot):
 	#explored
 	for y in range(config.SCREEN_HEIGHT):
 		vy = y + ovy
-		if (vy > region.height - 1) or vy < 0:
+		if (vy > region.length - 1) or vy < 0:
 			break
 		for x in range(config.SCREEN_WIDTH):
 			vx = x + ovx
-			if (vx > region.width - 1) or vx < 0:
+			if (vx > region.length - 1) or vx < 0:
 				break
 
 			if terrain[vy][vx].explored:
