@@ -15,3 +15,7 @@ class Rect:
 		#returns true if this rectangle intersects with another one
 		return (self.x1 <= other.x2 and self.x2 >= other.x1 and
 			self.y1 <= other.y2 and self.y2 >= other.y1)
+
+def in_circle(center_x, center_y, radius, x, y):
+    square_dist = (center_x - x) ** 2 + (center_y - y) ** 2
+    return square_dist <= radius ** 2

@@ -82,8 +82,8 @@ def map_compute_fov(fov_map, x0, y0, light_walls = False, radius = 10, fix = Tru
 			
 			for square in line:
 				d += s
-				light = 1 - math.pow(d, 2) + .1
-				#light = 1
+				#light = 1.0 - math.pow(d, 2.0) + .1
+				light = 1
 				
 				if (square[0] >= len(fov_map[0])) or (square[1] >= len(fov_map)) or (square[0] < 0 )or (square[1] < 0):
 					break

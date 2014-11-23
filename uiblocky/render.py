@@ -3,6 +3,7 @@ import libtcodpy as ltc
 import symbols as sym
 import math
 from algorithms.fov import *
+from algorithms.geometry import in_circle
 
 DARK_WALL = ltc.grey
 DARK_GROUND = ltc.black
@@ -173,7 +174,7 @@ def render(VP, snapshot):
 	
 	ltc.console_clear(CON)
 	
-	radius = 20
+	radius = 40
 	
 	#recompute FOV if needed (the player moved or something)
 	if not ego.is_updated or fov is None:
@@ -209,33 +210,43 @@ def render(VP, snapshot):
 				haze = .9
 			"""
 			
+			# in FOV area
+			if (ox < vx < ox + (radius * 2)) and (oy < vy < oy + (radius * 2)) and in_circle(ego.x, ego.y, radius, vx, vy):
+				# in FOV
+				if fov[vy - oy][vx - ox] > 0:
+					terrain[vy][vx].explored = True
+					if h < 0:
+						ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_sea * fov[vy - oy][vx - ox], ltc.BKGND_SET)
+						#ltc.console_set_char_background(CON, x, y, ltc.red, ltc.BKGND_SET)
+						#ltc.console_set_default_foreground(CON, ltc.cyan)
+						#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
+					else:
+						ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_land * fov[vy - oy][vx - ox], ltc.BKGND_SET)
 			
-			
-			#if h > maxh: maxh = h
-			#if h < minh: minh = h
-		
-			if h < 0:
-				ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_sea, ltc.BKGND_SET)
-				#ltc.console_set_char_background(CON, x, y, ltc.red, ltc.BKGND_SET)
-				#ltc.console_set_default_foreground(CON, ltc.cyan)
-				#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
-			else:
-				ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_land * haze, ltc.BKGND_SET)
-			
-			"""	
-			for entity in terrain[vy][vx].entities:
-				symbol = sym.get_symbol(entity)
-				ltc.console_set_default_foreground(CON, symbol.front_color)
-				ltc.console_set_char_background(CON, ofx + x, ofy + y, symbol.back_color, ltc.BKGND_SET )
-				ltc.console_put_char(CON,  ofx + x, ofy + y, symbol.char, ltc.BKGND_SET)
-			
-			if terrain[vy][vx].explored:
-				if terrain[vy][vx].block_sight:
-					ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
+			"""
+			if in_circle(ego.x, ego.y, radius, vx, vy):
+				if h < 0:
+					ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_sea * fov[vy - oy][vx - ox], ltc.BKGND_SET)
+					#ltc.console_set_char_background(CON, x, y, ltc.red, ltc.BKGND_SET)
+					#ltc.console_set_default_foreground(CON, ltc.cyan)
+					#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
 				else:
-					ltc.console_set_char_background(CON, x, y, EXPLORED_GROUND, ltc.BKGND_SET)
+					ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_land * fov[vy - oy][vx - ox], ltc.BKGND_SET)
+			"""
+			"""	
+				for entity in terrain[vy][vx].entities:
+					symbol = sym.get_symbol(entity)
+					ltc.console_set_default_foreground(CON, symbol.front_color)
+					ltc.console_set_char_background(CON, ofx + x, ofy + y, symbol.back_color, ltc.BKGND_SET )
+					ltc.console_put_char(CON,  ofx + x, ofy + y, symbol.char, ltc.BKGND_SET)
 			
-			
+				if terrain[vy][vx].explored:
+					if terrain[vy][vx].block_sight:
+						ltc.console_set_char_background(CON, x, y, EXPLORED_WALL, ltc.BKGND_SET)
+					else:
+						ltc.console_set_char_background(CON, x, y, EXPLORED_GROUND, ltc.BKGND_SET)
+			"""
+			"""
 			# in FOV area
 			if (ox < vx < ox + (radius * 2)) and (oy < vy < oy + (radius * 2)):
 				# in FOV
