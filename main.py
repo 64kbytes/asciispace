@@ -27,28 +27,35 @@ class Viewport(object):
 		self.stack		= [None for i in range(config.MAX_ZOOM)]
 		
 	def get_screen_offset(self):
+		#offset between screen and viewport
 		return (self.x, self.y)
 		
 	def get_map_offset(self):
+		#offset between map and viewport 
 		return (self.offset_x, self.offset_y)
 		
 	def screen_to_map(self, x, y):
+		#convert xy from screen to map
 		vx, vy = self.get_screen_offset()
 		mx, my = self.get_map_offset()			
 		return (x + mx - vx, y + my - vy)
 		
 	def screen_to_viewport(self, x, y):
+		#convert xy from screen to viewport
 		return (self.x - x, self.y - y)
 		
 	def viewport_to_screen(self, x, y):
+		#convert xy from viewport to screen
 		return (self.x + x, self.y + y)
 		
 	def map_to_viewport(self, x, y):
+		#convert xy from map to viewport
 		mx, my = self.get_map_offset()
 		return (x + mx, y + my)
 		
 	def move_to(self, x, y):
 		
+		"""
 		if x < 0:
 			x = self.x
 		elif (x + self.width) > self.map_size:
@@ -58,7 +65,7 @@ class Viewport(object):
 			y = self.y
 		elif (y + self.height) > self.map_size:
 			y = self.map_size - self.height
-		
+		"""
 		self.offset_x = x
 		self.offset_y = y
 		
@@ -88,28 +95,26 @@ class Viewport(object):
 			self.offset_y = 0
 		elif y > (self.map_size - cy):
 			self.offset_y = self.map_size - self.height
-
-		
-	def is_at_viewport_edge(self, x, y):
-		at_edge = dict.fromkeys(('N','E','S','W'), False)
-		at_edge['N'] = (y - self.offset_y) == 0
-		at_edge['E'] = (x - self.offset_x) == self.width - 1
-		at_edge['S'] = (y - self.offset_y) == self.height - 1
-		at_edge['W'] = (x - self.offset_x) == 0
-		return at_edge
-		
-	#def is_at_screen_edge(self, x, y):
-	#	return self.is_at_edge(x - self.offset_x - 1, y - self.offset_y - 1, self.width, self.height)
 		
 	def is_leaving(self, x, y, boundary = 10):
-	
 		leaving = dict.fromkeys(('N','E','S','W'), False)
+	
+		#is inside scroll boundary
+		in_north_boundary	= ((y - self.offset_y) < boundary)
+		in_south_boundary	= ((y - self.offset_y) > (self.height - boundary - 1))
+		in_east_boundary	= ((x - self.offset_x) > (self.width - boundary - 1))
+		in_west_boundary	= ((x - self.offset_x) < boundary)
+		#is at map scroll end
+		at_north_map_end	= self.offset_y		<= 0
+		at_south_map_end	= (self.offset_y	>= (self.map_size - self.height))
+		at_east_map_end		= (self.offset_x	>= (self.map_size - self.width))
+		at_west_map_end		= self.offset_x		<= 0
+		#leaving condition
+		leaving['N'] = in_north_boundary	and not at_north_map_end
+		leaving['S'] = in_south_boundary	and not at_south_map_end
+		leaving['E'] = in_east_boundary		and not at_east_map_end
+		leaving['W'] = in_west_boundary		and not at_west_map_end
 		
-		leaving['N'] = ((y - self.offset_y) < boundary) and self.offset_y > 0
-		leaving['E'] = ((x - self.offset_x) > (self.width - boundary - 1)) and (self.offset_x < (self.map_size - self.width))
-		leaving['S'] = ((y - self.offset_y) > (self.height - boundary - 1)) and (self.offset_y < (self.map_size - self.height))
-		leaving['W'] = ((x - self.offset_x) < boundary) and self.offset_x > 0
-
 		return leaving
 		
 	def zoom_in(self, pos, f):
@@ -147,8 +152,6 @@ def init():
 	G.options()
 
 init()
-	
-snapshot = None
 
 while True:
 		
@@ -161,7 +164,7 @@ while True:
 		
 	G.handle_user_input(ui, VP, GM)
 	
-	snapshot = GM.snapshot()
-	G.render(VP, snapshot)
+	G.set_snapshot(GM.get_snapshot())
+	G.render(VP)
 	
 exit()

@@ -65,7 +65,7 @@ def get_cast_in_region():
 			visible_cast.append(char)
 	return visible_cast
 	
-def snapshot():
+def get_snapshot():
 	return {
 		'region':	REGION,
 		'cast':		get_cast_in_region(),
@@ -73,11 +73,12 @@ def snapshot():
 	}
 	
 def move_ego(xyz):
+	# distance of each ego step its a function of map scale unit
 	u = REGION.get_map_scale_unit()
 	nx = EGO.x + xyz[0]
 	ny = EGO.y + xyz[1]
 	nz = EGO.z + xyz[2]
-	
+
 	if nx < REGION.length and ny < REGION.length and nx >= 0 and ny >= 0:
 		tile = REGION.terrain[ny][nx]
 		if not tile.blocked:

@@ -267,6 +267,7 @@ class Region(object):
 		return int((self.length - 1) / math.pow(2, f-1))
 	
 	def zoom_in(self, xy, f):
+		# cap zoom in
 		if not self.zoom < Region.max_zoom: 
 			return False
 	

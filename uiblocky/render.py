@@ -13,12 +13,12 @@ EXPLORED_GROUND = ltc.darkest_grey * .5
 LIGHT_WALL = ltc.Color(130, 110, 50)
 LIGHT_GROUND = ltc.Color(200, 180, 50)
 
-
-CON		= None
-UI		= None
-MOUSE	= None
-KEY		= None
-KEYBOARD_MAP = {
+SNAPSHOT		= None
+CON				= None
+UI				= None
+MOUSE			= None
+KEY				= None
+KEYBOARD_MAP	= {
 	'NONE':			ltc.KEY_NONE,
 	'ESCAPE':		ltc.KEY_ESCAPE,
 	'UP':			ltc.KEY_UP,
@@ -47,12 +47,13 @@ def init():
 	ltc.sys_set_fps(config.FPS)
 	
 	#ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_ASCII_INROW | ltc.FONT_TYPE_GREYSCALE, 16, 16)
-	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_TCOD | ltc.FONT_TYPE_GREYSCALE, 32, 8)
-	
+	ltc.console_set_custom_font(config.TILE_SET, ltc.FONT_LAYOUT_TCOD | ltc.FONT_TYPE_GREYSCALE, 32, 8)	
 	ltc.console_init_root(w, h, config.TITLE, False)
+	
 	KEYBOARD_MAP = dict([[v, k] for k, v in KEYBOARD_MAP.items()])
 	CON = ltc.console_new(w, h)
-	UI = ltc.console_new(w, 10)
+	UI = ltc.console_new(w, h)
+	ltc.console_set_key_color(UI, ltc.purple)
 	MOUSE = ltc.Mouse()
 	KEY = ltc.Key()
 		
@@ -79,8 +80,9 @@ def get_keyboard():
 def get_mouse():
 	return MOUSE
 
-def clear(snapshot):
-	for cha in snapshot['cast']:
+def clear():
+	global SNAPSHOT
+	for cha in SNAPSHOT['cast']:
 		ltc.console_set_char_background(CON, cha.x, cha.y, ltc.BKGND_NONE, ltc.BKGND_SET)
 		ltc.console_put_char(CON, cha.x, cha.y, ' ', ltc.BKGND_NONE)
 
@@ -112,16 +114,17 @@ def handle_user_input(ui, VP, GM):
 	if xyz != (0,0,0):
 		if GM.move_ego(xyz):
 			GM.EGO.is_updated = False
-								
-			leaving = VP.is_leaving(GM.EGO.x, GM.EGO.y)
-								
+			print GM.EGO.x
+					
+			leaving = VP.is_leaving(GM.EGO.x, GM.EGO.y)							
 			dx = xyz[0] if ((leaving['E'] and xyz[0] > 0) or (leaving['W'] and xyz[0] < 0)) else 0
 			dy = xyz[1] if ((leaving['N'] and xyz[1] < 0) or (leaving['S'] and xyz[1] > 0)) else 0
 			dz = xyz[2]
 			
 			VP.move(dx, dy, dz)
 
-def render_UI(VP, snapshot):
+def render_UI(VP):
+	global SNAPSHOT
 
 	ltc.console_clear(UI)
 	
@@ -133,42 +136,47 @@ def render_UI(VP, snapshot):
 	if lx < 0 or ly < 0:
 		return
 	
-	names = [obj.name + " | G({0}:{1}) | L({2}:{3})".format(obj.gx, obj.gy, obj.x, obj.y) for obj in snapshot['cast']
+	names = [obj.name + " | G({0}:{1}) | L({2}:{3})".format(obj.gx, obj.gy, obj.x, obj.y) for obj in SNAPSHOT['cast']
 		if obj.x == lx and obj.y == ly and True]
 		
 	names = ' | ' + ', '.join(names)
 		
-	if lx < snapshot['region'].length and ly < snapshot['region'].length:
+	if lx < SNAPSHOT['region'].length and ly < SNAPSHOT['region'].length:
 	
-		tile = snapshot['region'].get_tile(lx, ly).get_info()
+		tile = SNAPSHOT['region'].get_tile(lx, ly).get_info()
 		tgx, tgy = tile['xy_global']
 		tlx, tly = tile['xy_local']
-		
-		"""	
-		if len(tile['entities']) > 0:
-			entities = [obj.name + " | G({0}:{1}) | L({2}:{3})".format(obj.gx, obj.gy, obj.x, obj.y) for obj in tile['entities']]
-			entities = ' | ' + ', '.join(entities)
-		else:
-			entities = ''		
-		"""
-		
+	
 		info = "G({0}:{1}) | L({2}:{3}) | Z: {4}".format(tgx, tgy, tlx, tly, int(tile['altitude'])) + names		
 		
-
 	else: info = '-'
 	
-	ltc.console_set_default_background(UI, ltc.white)
-	ltc.console_set_default_foreground(UI, ltc.black)
-	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_NONE, ltc.LEFT, info)
+	ltc.console_set_default_background(UI, ltc.BKGND_NONE)
+	ltc.console_set_default_foreground(UI, ltc.white)
+	ltc.console_print_ex(UI, 0, 0, ltc.BKGND_SET, ltc.LEFT, info)
+	ltc.console_set_default_background(UI, ltc.purple)
 	
-	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, 1, 0, 0, 0, 1, .5)
+	zoomx = 50
+	zoomy = 40
+	
+	for zy in range(zoomy):
+		for zx in range(zoomx):	
+			ltc.console_set_char_background(UI, zx + (x - zoomx / 2), zy + (y - zoomy / 2), ltc.BKGND_LIGHTEN, ltc.BKGND_SET)
+	
+	ltc.console_set_char_background(UI, x, y, ltc.white, ltc.BKGND_SET)
+	
+	ltc.console_blit(UI, 0, 0, config.SCREEN_WIDTH, config.SCREEN_HEIGHT, 0, 0, 0, 1, .5)
 
-def render(VP, snapshot):
-	global land_colors, sea_colors
+def set_snapshot(snapshot):
+	global SNAPSHOT
+	SNAPSHOT = snapshot
 
-	region	= snapshot['region']
-	ego		= snapshot['ego']
-	cast	= snapshot['cast']
+def render(VP):
+	global land_colors, sea_colors, SNAPSHOT
+
+	region	= SNAPSHOT['region']
+	ego		= SNAPSHOT['ego']
+	cast	= SNAPSHOT['cast']
 	terrain	= region.get_terrain()
 	fov		= region.get_fov()
 	
@@ -210,6 +218,17 @@ def render(VP, snapshot):
 				haze = .9
 			"""
 			
+			# no fov
+			if h < 0:
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_sea, ltc.BKGND_SET)
+				#ltc.console_set_char_background(CON, x, y, ltc.red, ltc.BKGND_SET)
+				#ltc.console_set_default_foreground(CON, ltc.cyan)
+				#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
+			else:
+				ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_land, ltc.BKGND_SET)
+			
+			"""
+			# LAST WORKING CODE
 			# in FOV area
 			if (ox < vx < ox + (radius * 2)) and (oy < vy < oy + (radius * 2)) and in_circle(ego.x, ego.y, radius, vx, vy):
 				# in FOV
@@ -222,8 +241,12 @@ def render(VP, snapshot):
 						#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
 					else:
 						ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_land * fov[vy - oy][vx - ox], ltc.BKGND_SET)
+			"""
+			
+			
 			
 			"""
+			# DELETE THIS
 			if in_circle(ego.x, ego.y, radius, vx, vy):
 				if h < 0:
 					ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_sea * fov[vy - oy][vx - ox], ltc.BKGND_SET)
@@ -256,13 +279,15 @@ def render(VP, snapshot):
 						ltc.console_set_char_background(CON, x, y, LIGHT_WALL * fov[vy - oy][vx - ox], ltc.BKGND_SET )
 					else:
 						ltc.console_set_char_background(CON, x, y, LIGHT_GROUND * fov[vy - oy][vx - ox], ltc.BKGND_SET )
+			# DELETE THIS -- END OF BLOCK
 			"""
+			
 			
 	#print minh, maxh
 
 	#render entities
 	for cha in cast:
-		chax,chay = snapshot['region'].xy_global_to_local((cha.gx, cha.gy))
+		chax,chay = SNAPSHOT['region'].xy_global_to_local((cha.gx, cha.gy))
 		
 		symbol = sym.get_symbol(cha)
 		ltc.console_set_default_foreground(CON, symbol.front_color)
@@ -274,7 +299,7 @@ def render(VP, snapshot):
 			
 	ltc.console_blit(CON, 0, 0, ofx + VP.width, ofy + VP.height, 0, 0, 0)
 	
-	render_UI(VP, snapshot)
+	render_UI(VP)
 	
 	ltc.console_flush()
 
