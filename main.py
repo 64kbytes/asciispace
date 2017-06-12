@@ -118,6 +118,7 @@ class Viewport(object):
 		return leaving
 		
 	def zoom_in(self, pos, f):
+		return
 		pos = self.screen_to_map(pos[0], pos[1])
 
 		if GM.zoom_in(pos, f):
@@ -127,6 +128,7 @@ class Viewport(object):
 			self.center_at(pos[0], pos[1])
 					
 	def zoom_out(self):
+		return
 		if GM.zoom_out():
 			self.zoom -= 1
 			#restore previous viewport xy
@@ -143,10 +145,13 @@ def init():
 	G.init()
 	
 	VP = Viewport(GM.get_region().length, 1, 1)
-	#VP.center_at(GM.EGO.x, GM.EGO.y)
+	
+	VP.center_at(GM.EGO.x, GM.EGO.y)
+	
+
 	#VP.move_to(0, 0)
 	#VP.center_on_map()
-	VP.move_to(0, 0)
+	#VP.move_to(0, 0)
 	
 	G.intro()
 	G.options()

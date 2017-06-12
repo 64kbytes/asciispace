@@ -114,7 +114,6 @@ def handle_user_input(ui, VP, GM):
 	if xyz != (0,0,0):
 		if GM.move_ego(xyz):
 			GM.EGO.is_updated = False
-			print GM.EGO.x
 					
 			leaving = VP.is_leaving(GM.EGO.x, GM.EGO.y)							
 			dx = xyz[0] if ((leaving['E'] and xyz[0] > 0) or (leaving['W'] and xyz[0] < 0)) else 0
@@ -211,13 +210,13 @@ def render(VP):
 			rgb_land = land_colors[h]
 			rgb_sea = sea_colors[-h]
 			
-			"""
+			
 			if h > ego.z > 0:
 				continue
 			if h < ego.z:
 				haze = .9
-			"""
 			
+			"""
 			# no fov
 			if h < 0:
 				ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_sea, ltc.BKGND_SET)
@@ -226,8 +225,8 @@ def render(VP):
 				#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
 			else:
 				ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_land, ltc.BKGND_SET)
-			
 			"""
+			
 			# LAST WORKING CODE
 			# in FOV area
 			if (ox < vx < ox + (radius * 2)) and (oy < vy < oy + (radius * 2)) and in_circle(ego.x, ego.y, radius, vx, vy):
@@ -241,7 +240,7 @@ def render(VP):
 						#ltc.console_put_char(CON, x, y, "~", ltc.BKGND_SET)
 					else:
 						ltc.console_set_char_background(CON, ofx + x, ofy + y, rgb_land * fov[vy - oy][vx - ox], ltc.BKGND_SET)
-			"""
+						
 			
 			
 			

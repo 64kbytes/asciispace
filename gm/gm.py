@@ -73,6 +73,7 @@ def get_snapshot():
 	}
 	
 def move_ego(xyz):
+
 	# distance of each ego step its a function of map scale unit
 	u = REGION.get_map_scale_unit()
 	nx = EGO.x + xyz[0]

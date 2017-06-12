@@ -12,7 +12,7 @@ class Tile:
 	def __init__(self, blocked, lx, ly, gx, gy, block_sight = None, explored = False):
 		self.x = lx
 		self.y = ly
-		self.z = None
+		self.z = 0
 		self.gx = gx
 		self.gy = gy
 	
@@ -91,14 +91,92 @@ class Region(object):
 		self.cache[self.zoom] = self.get_empty_region((0, 0))
 		self.terrain = self.cache[self.zoom]
 	
-		self.seed_terrain()
-		self.create_terrain(True)
+		#self.seed_terrain()
+		#self.create_terrain(True)
+
+		self.empty_terrain()
 		
 		self.set_bounds()
 		
-		#self.create_dungeon(length, length)		
+		self.create_dungeon(length, length)		
 		self.fov_map = set_fov_map(self.terrain)
 		self.fov = None
+
+
+
+	def create_dungeon(self, width, height):
+		global PLAYER_XY
+		
+		rooms = []
+		num_rooms = 0
+	
+		for r in range(self.max_rooms):
+			#random width and height
+			w = random.randint(self.room_min_size, self.room_max_size)
+			h = random.randint(self.room_min_size, self.room_max_size)
+			#random position without going out of the boundaries of the map
+			x = random.randint(0, width - w - 1)
+			y = random.randint(0, height - h - 1)
+
+			#"Rect" class makes rectangles easier to work with
+			new_room = Rect(x, y, w, h)
+
+			#run through the other rooms and see if they intersect with this one
+			failed = False
+			for other_room in rooms:
+				if new_room.intersect(other_room):
+					failed = True
+					break
+		    
+			if not failed:
+				self.create_room(new_room)
+				(new_x, new_y) = new_room.center()
+				LIGHTS.append((new_x, new_y))
+				if num_rooms == 0:
+					PLAYER_XY = (new_x, new_y, 0)
+				else:
+					(prev_x, prev_y) = rooms[num_rooms-1].center()
+					if random.randint(0, 1) == 1:
+						self.create_h_tunnel(prev_x, new_x, prev_y)
+						self.create_v_tunnel(prev_y, new_y, new_x)
+					else:
+						self.create_v_tunnel(prev_y, new_y, prev_x)
+						self.create_h_tunnel(prev_x, new_x, new_y)
+				rooms.append(new_room)
+				num_rooms += 1
+				
+	def create_room(self, room):
+		global PLAYER_XY
+		#go through the tiles in the rectangle and make them passable
+		for y in range(room.y1 + 1, room.y2):
+			for x in range(room.x1 + 1, room.x2):
+				self.terrain[y][x].blocked = False
+				self.terrain[y][x].block_sight = False
+				self.terrain[y][x].z = 0
+
+		#if PLAYER_XY == (0,0,0):
+		#	PLAYER_XY = room.center()
+	
+	def create_h_tunnel(self, x1, x2, y):
+		#horizontal tunnel. min() and max() are used in case x1>x2
+		for x in range(min(x1, x2), max(x1, x2) + 1):
+			self.terrain[y][x].blocked = False
+			self.terrain[y][x].block_sight = False
+			self.terrain[y][x].z = 0
+	
+	def create_v_tunnel(self, y1, y2, x):
+		#vertical tunnel
+		for y in range(min(y1, y2), max(y1, y2) + 1):
+			self.terrain[y][x].blocked = False
+			self.terrain[y][x].block_sight = False
+			self.terrain[y][x].z = 0
+
+
+
+
+
+
+
 		
 	def xy_global_to_local(self, gxy):
 		gx, gy = gxy
@@ -200,7 +278,16 @@ class Region(object):
 		self.terrain[0][-1].z = random.uniform(-1.0, 1.0)
 		self.terrain[-1][-1].z = random.uniform(-1.0, 1.0)
 		self.terrain[-1][0].z = random.uniform(-1.0, 1.0)
+	
+	def empty_terrain(self):
+		sq = int(math.pow(2, 8))	#square divisions in this iteration: 1, 2, 4, 8, 16, 32, 64, ...
 		
+		for y in range(129):
+			for x in range(129):
+				self.terrain[y][x].blocked = True
+				self.terrain[y][x].block_sight = True
+				self.terrain[y][x].z = 5;
+
 	def create_terrain(self, wrap, i = 0, d = 128, h = .5):
 	
 		sq = int(math.pow(2, i))	#square divisions in this iteration: 1, 2, 4, 8, 16, 32, 64, ...
