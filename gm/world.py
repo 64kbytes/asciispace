@@ -2,7 +2,6 @@ import random
 import math
 from algorithms.fov import *
 from algorithms.geometry import *
-from algorithms.terrain import *
 from debug import *
 
 PLAYER_XY = (0, 0, 0)
